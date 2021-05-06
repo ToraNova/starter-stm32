@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include <inttypes.h>
 #include "stm32h743xx.h"
 #include "aux.h"
 
@@ -12,7 +13,7 @@ void _init(void)
 }
 
 // format print a string and its arguments to a USART handler
-void usart_printf(USART_TypeDef *usart,const char *msg, ...) {
+void usart_printf(USART_TypeDef *usart, const char *msg, ...) {
 	char buf[80];
 	va_list args;
 	va_start(args,msg);
@@ -21,6 +22,12 @@ void usart_printf(USART_TypeDef *usart,const char *msg, ...) {
 		usart->TDR = buf[i];  //send it back out
 		while (!(usart->ISR & USART_ISR_TC)); //wait for TX to be complete
 	}
+	return;
+}
+
+void usart_print32(USART_TypeDef *usart, uint32_t regval){
+	usart_printf(usart,"[%08" PRIx32 "]", regval);
+	return;
 }
 
 //block execution until a character is read from the USART handler

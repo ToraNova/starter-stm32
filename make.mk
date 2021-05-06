@@ -61,10 +61,12 @@ CFLAGS += \
   -Wcast-align
 
 # Debugging/Optimization
-ifeq ($(DEBUG), 1)
-  CFLAGS += -Og
-else
+ifeq ($(OPTI), 1)
+  # optimize for code size if make OPTI=1
   CFLAGS += -Os
+else
+  # default (debugging)
+  CFLAGS += -Og
 endif
 
 # Log level is mapped to TUSB DEBUG option

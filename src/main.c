@@ -1,12 +1,11 @@
-#include "string.h"
-#include "stm32h743xx.h"
-#include "aux.h"
-
 /*
- * example blinky program
+ * example blinky program for nucleoh743zi2
  * please refer to the reference manual to understand what is going on
  * https://www.st.com/resource/en/reference_manual/dm00314099-stm32h742-stm32h743753-and-stm32h750-value-line-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
  */
+
+#include "stm32h743xx.h"
+#include "aux.h"
 
 uint32_t volatile msTicks;// counter for systicks
 
@@ -21,7 +20,9 @@ void idle_delay(uint32_t ms){
 }
 
 void TIM4_IRQHandler(void){
+	TIM4->SR &= ~TIM_SR_UIF; //clear the update interrupt flag
 	GPIOB->ODR ^= GPIO_ODR_OD14; // toggle bit 14
+	return;
 }
 
 int main(void){
@@ -73,17 +74,16 @@ int main(void){
 	// enable the timer4 clock to be gated by the rcc apb4lenr bus
 	RCC->APB1LENR |= RCC_APB1LENR_TIM4EN;
 	TIM4->PSC = 64000; //prescaler 64000 (max 65535) on 64MHz clock means timer tick at 1Khz
-	TIM4->ARR = 1000; //timer interrupt trigger after 1000 ticks, so 1 second interrupt freq
-	//TIM4->CR1 |= TIM_CR1_URS; //overflow/underflow interrupt, count down
-	//TIM4->CR1 |= TIM_CR1_DIR; //count down (do not set this to count up)
-	//TIM4->DIER |= TIM_DIER_UIE; // update interrupt ENABLED
+	TIM4->ARR = 500; //timer interrupt trigger after 1000 ticks, so 1 second interrupt freq
+	TIM4->CR1 |= TIM_CR1_URS | TIM_CR1_DIR; //overflow/underflow interrupt, count down
+	TIM4->DIER |= TIM_DIER_UIE; // update interrupt ENABLED
 	//TIM4->EGR |= TIM_EGR_UG; // update generation
 	TIM4->CR1 |= TIM_CR1_CEN; //enable the counter
 
 	//enable all interrupts
 	//__disable_irq(); //disable all global interrupts
 	////NVIC_SetPriority(TIM4_IRQn, 1); //0 is default and highest interrupt priority
-	//NVIC_EnableIRQ(TIM4_IRQn); //enable timer 4 interrupts
+	NVIC_EnableIRQ(TIM4_IRQn); //enable timer 4 interrupts
 	////re-enable all global interrupts
 	//__enable_irq();
 
@@ -97,11 +97,9 @@ int main(void){
 		idle_delay(50);
 	}
 
-	// main loop
-	//char temp[] = "hello world\n\r";
-	//usart_getc(USART3);
-
 	while(1){
-		usart_printf(USART3,"%lu\n\r", TIM4->CNT);
+		usart_printf(USART3,"%lu ", TIM4->CNT);
+		usart_print32(USART3, TIM4->SR);
+		usart_printf(USART3, "\n\r");
 	}
 }
