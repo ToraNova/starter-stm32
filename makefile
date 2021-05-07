@@ -4,7 +4,7 @@
 #-----------------------------------------------------------------
 
 # TODO: project name
-PROJECT := blinky_dma
+PROJECT := template_project
 
 # TODO: project source location
 SRC_PROJECT := src
@@ -23,6 +23,11 @@ INC += \
   $(SRC_PROJECT) \
 
 # user sources
-SRC_C += $(wildcard $(SRC_PROJECT)/*.c)
+SRC_C += \
+	$(wildcard $(SRC_PROJECT)/*.c) \
+
+# (optional, comment out if not using this lib)
+# include tinyusb/networking and lwip stack
+include tinyusb_net_lwip.mk
 
 include rules.mk

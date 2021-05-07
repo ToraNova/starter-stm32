@@ -9,4 +9,5 @@ reference manual for your respective controller (this template uses a [nucleo32h
 
 ```
 pacman -S make arm-none-eabi-gcc arm-none-eabi-newlib
+git submodule update --init st/*
 ```

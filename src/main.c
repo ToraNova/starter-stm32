@@ -1,129 +1,187 @@
 /*
- * example blinky program for nucleoh743zi2
- * please refer to the reference manual to understand what is going on
- * https://www.st.com/resource/en/reference_manual/dm00314099-stm32h742-stm32h743753-and-stm32h750-value-line-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
+ * example usbeth http server
+ * please refer to the tinyusb net_lwip example
  */
 
 #include "stm32h743xx.h"
 #include "aux.h"
+#include "tusb.h"
 
-uint32_t volatile msTicks;// counter for systicks
+#include "dhserver.h"
+#include "dnserver.h"
+#include "lwip/init.h"
+#include "lwip/timeouts.h"
+#include "httpd.h"
 
-// SysTick Interrupt Handler
-void SysTick_Handler (void) {
-	msTicks++;
-}
+/* lwip context */
+static struct netif netif_data;
 
-void idle_delay(uint32_t ms){
-	uint32_t cur = msTicks;
-	while(msTicks - cur < ms);
-}
+/* shared between tud_network_recv_cb() and service_traffic() */
+static struct pbuf *received_frame;
 
-void TIM4_IRQHandler(void){
-	TIM4->SR &= ~TIM_SR_UIF; //clear the update interrupt flag
-	GPIOE->ODR ^= GPIO_ODR_OD1; // toggle bit 14
-	return;
-}
+/* this is used by this code, ./class/net/net_driver.c, and usb_descriptors.c */
+/* ideally speaking, this should be generated from the hardware's unique ID (if available) */
+/* it is suggested that the first byte is 0x02 to indicate a link-local address */
+const uint8_t tud_network_mac_address[6] = {0x02,0x02,0x84,0x6A,0x96,0x00};
 
-void DMA1_Stream0_IRQHandler(void){
-	// this interrupt could be caused by either a transfer complete interrupt
-	// OR a transfer error interrupt, it is up to software to check the LISR
-	// (or HISR) and decide
-	if( DMA1->LISR & DMA_LISR_TEIF0 ){
-		// transmission err.
-		DMA1->LIFCR |= DMA_LIFCR_CTEIF0; // clear transmit complete flag
-		GPIOB->BSRR = GPIO_BSRR_BS14; //set bit
-	}else{
-		// transfer is successful (this implies TX is done)
-		DMA1->LIFCR |= DMA_LIFCR_CTCIF0; // clear transmit complete flag
-		GPIOB->BSRR = GPIO_BSRR_BS0; //set bit
+/* network parameters of this MCU */
+static const ip_addr_t ipaddr  = IPADDR4_INIT_BYTES(192, 168, 7, 1);
+static const ip_addr_t netmask = IPADDR4_INIT_BYTES(255, 255, 255, 0);
+static const ip_addr_t gateway = IPADDR4_INIT_BYTES(0, 0, 0, 0);
+
+/* database IP addresses that can be offered to the host; this must be in RAM to store assigned MAC addresses */
+static dhcp_entry_t entries[] =
+{
+	/* mac ip address                          lease time */
+	{ {0}, IPADDR4_INIT_BYTES(192, 168, 7, 2), 24 * 60 * 60 },
+	{ {0}, IPADDR4_INIT_BYTES(192, 168, 7, 3), 24 * 60 * 60 },
+	{ {0}, IPADDR4_INIT_BYTES(192, 168, 7, 4), 24 * 60 * 60 },
+};
+
+static const dhcp_config_t dhcp_config =
+{
+	.router = IPADDR4_INIT_BYTES(0, 0, 0, 0),  /* router address (if any) */
+	.port = 67,                                /* listen port */
+	.dns = IPADDR4_INIT_BYTES(192, 168, 7, 1), /* dns server (if any) */
+	"usb",                                     /* dns suffix */
+	TU_ARRAY_SIZE(entries),                    /* num entry */
+	entries                                    /* entries */
+};
+static err_t linkoutput_fn(struct netif *netif, struct pbuf *p)
+{
+	(void)netif;
+
+	for (;;)
+	{
+		/* if TinyUSB isn't ready, we must signal back to lwip that there is nothing we can do */
+		if (!tud_ready())
+			return ERR_USE;
+
+		/* if the network driver can accept another packet, we make it happen */
+		if (tud_network_can_xmit())
+		{
+			tud_network_xmit(p, 0 /* unused for this example */);
+			return ERR_OK;
+		}
+
+		/* transfer execution to TinyUSB in the hopes that it will finish transmitting the prior packet */
+		tud_task();
 	}
 }
 
-void DMA1_Stream1_IRQHandler(void){
-	if( DMA1->LISR & DMA_LISR_TEIF1 ){
-		// transmission err.
-		DMA1->LIFCR |= DMA_LIFCR_CTEIF1; // clear transmit complete flag
-		GPIOB->BSRR = GPIO_BSRR_BS14; //set bit
-	}else{
-		// transfer is successful (this implies RX is done)
-		DMA1->LIFCR |= DMA_LIFCR_CTCIF1; // clear transmit complete flag
-		GPIOB->BSRR = GPIO_BSRR_BS0; //set bit
+static err_t output_fn(struct netif *netif, struct pbuf *p, const ip_addr_t *addr)
+{
+	return etharp_output(netif, p, addr);
+}
+
+static err_t netif_init_cb(struct netif *netif)
+{
+	LWIP_ASSERT("netif != NULL", (netif != NULL));
+	netif->mtu = CFG_TUD_NET_MTU;
+	netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_LINK_UP | NETIF_FLAG_UP;
+	netif->state = NULL;
+	netif->name[0] = 'E';
+	netif->name[1] = 'X';
+	netif->linkoutput = linkoutput_fn;
+	netif->output = output_fn;
+	return ERR_OK;
+}
+
+static void init_lwip(void)
+{
+	struct netif *netif = &netif_data;
+
+	lwip_init();
+
+	/* the lwip virtual MAC address must be different from the host's; to ensure this, we toggle the LSbit */
+	netif->hwaddr_len = sizeof(tud_network_mac_address);
+	memcpy(netif->hwaddr, tud_network_mac_address, sizeof(tud_network_mac_address));
+	netif->hwaddr[5] ^= 0x01;
+
+	netif = netif_add(netif, &ipaddr, &netmask, &gateway, NULL, netif_init_cb, ip_input);
+	netif_set_default(netif);
+}
+
+/* handle any DNS requests from dns-server */
+bool dns_query_proc(const char *name, ip_addr_t *addr)
+{
+	if (0 == strcmp(name, "tiny.usb"))
+	{
+		*addr = ipaddr;
+		return true;
+	}
+	return false;
+}
+
+bool tud_network_recv_cb(const uint8_t *src, uint16_t size)
+{
+	/* this shouldn't happen, but if we get another packet before
+	   parsing the previous, we must signal our inability to accept it */
+	if (received_frame) return false;
+
+	if (size)
+	{
+		struct pbuf *p = pbuf_alloc(PBUF_RAW, size, PBUF_POOL);
+
+		if (p)
+		{
+			/* pbuf_alloc() has already initialized struct; all we need to do is copy the data */
+			memcpy(p->payload, src, size);
+
+			/* store away the pointer for service_traffic() to later handle */
+			received_frame = p;
+		}
+	}
+
+	return true;
+}
+
+uint16_t tud_network_xmit_cb(uint8_t *dst, void *ref, uint16_t arg)
+{
+	struct pbuf *p = (struct pbuf *)ref;
+	struct pbuf *q;
+	uint16_t len = 0;
+
+	(void)arg; /* unused for this example */
+
+	/* traverse the "pbuf chain"; see ./lwip/src/core/pbuf.c for more info */
+	for(q = p; q != NULL; q = q->next)
+	{
+		memcpy(dst, (char *)q->payload, q->len);
+		dst += q->len;
+		len += q->len;
+		if (q->len == q->tot_len) break;
+	}
+
+	return len;
+}
+
+static void service_traffic(void)
+{
+	/* handle any packet received by tud_network_recv_cb() */
+	if (received_frame)
+	{
+		ethernet_input(received_frame, &netif_data);
+		pbuf_free(received_frame);
+		received_frame = NULL;
+		tud_network_recv_renew();
+	}
+
+	sys_check_timeouts();
+}
+
+void tud_network_init_cb(void)
+{
+	/* if the network is re-initializing and we have a leftover packet, we must do a cleanup */
+	if (received_frame)
+	{
+		pbuf_free(received_frame);
+		received_frame = NULL;
 	}
 }
 
 int main(void){
-	// enable SRAM2 clock (used and accesible by DMA)
-	//RCC->AHB2ENR |= RCC_AHB2ENR_SRAM2EN; //seems to be unecessary
-
-	// enable GPIOB and GPIOE clock
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOBEN | RCC_AHB4ENR_GPIOEEN;
-	GPIOB->MODER &= ~GPIO_MODER_MODE0; //reset mode config to b00
-	GPIOB->MODER |= (0b01 << GPIO_MODER_MODE0_Pos); //set mode config to b01 (output)
-	//configure pin 14 on gpiob
-	GPIOB->MODER &= ~GPIO_MODER_MODE14;
-	GPIOB->MODER |= (0b01 << GPIO_MODER_MODE14_Pos); //set mode config to b01 (output)
-
-	GPIOE->MODER &= ~GPIO_MODER_MODE1;
-	GPIOE->MODER |= (0b01 << GPIO_MODER_MODE1_Pos); //set mode config to b01 (output)
-
-	if (SysTick_Config (SystemCoreClock / 1000)) { // SysTick 1mSec
-		//error, set bit and die
-		GPIOB->BSRR = GPIO_BSRR_BS14;
-		while(1);
-	}
-
-	//------------------------USART EXAMPLE-------------------------------------------
-	//configure GPIOC pin 10 and 11 for alternate function mode (uart)
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOCEN;
-	GPIOC->MODER &= ~(GPIO_MODER_MODE10 | GPIO_MODER_MODE11); //default 0000
-	GPIOC->MODER |= (0b10 << GPIO_MODER_MODE10_Pos);
-	GPIOC->MODER |= (0b10 << GPIO_MODER_MODE11_Pos);
-	GPIOC->AFR[1] &= ~(GPIO_AFRH_AFSEL10 | GPIO_AFRH_AFSEL11);
-	// page 541 - alternate function configuration (AF7)
-	// AFR[1] is the AFRH
-	GPIOC->AFR[1] |= (0b0111 << GPIO_AFRH_AFSEL10_Pos);
-	GPIOC->AFR[1] |= (0b0111 << GPIO_AFRH_AFSEL11_Pos);
-
-	//------------------------DMA (USART) CONFIGURATION-------------------------------
-	RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN; //clock gating for DMA1
-	//configure a transfer buffer (USART), memory increment (as oppose to peripheral increment PINC)
-	// also enable transfer complete interrupt, transfer error interrupt
-	// dir 01 -> memory to peripheral (TX)
-	DMA1_Stream0->CR |= DMA_SxCR_TRBUFF | DMA_SxCR_MINC | (0b01 << DMA_SxCR_DIR_Pos) | DMA_SxCR_TCIE | DMA_SxCR_TEIE;
-	// dir 00 -> peripheral to memory (RX)
-	//DMA1_Stream1->CR |= DMA_SxCR_TRBUFF | DMA_SxCR_MINC | (0b00 << DMA_SxCR_DIR_Pos) | DMA_SxCR_TCIE | DMA_SxCR_TEIE;
-	// configure dmamux for respective dma requests
-	//see page 694 and 695 (Table 121.)
-	DMAMUX1_Channel0->CCR |= 46U; //enable channel 0 for usart3_tx_dma
-	//DMAMUX1_Channel1->CCR |= 45U; //enable channel 1 for usart3_rx_dma
-
-	// USART init
-	RCC->APB1LENR |= RCC_APB1LENR_USART3EN;
-	USART3->CR3 |= USART_CR3_DMAT; //enable DMA xmit only. (USART_CR3_DMAR)
-	USART3->BRR = 0x1a0b; //see page 2058, stm32h743 defaults to internal clock @ 64MHz
-	//enable TX, RX and UART
-	USART3->CR1 |= USART_CR1_RE | USART_CR1_TE | USART_CR1_UE;
-	//read page 2048 for rx and tx operations
-	//--------------------------------------------------------------------------------
-
-	//------------------------TIMER INTERRUPT-----------------------------------------
-	// enable the timer4 clock to be gated by the rcc apb4lenr bus
-	RCC->APB1LENR |= RCC_APB1LENR_TIM4EN;
-	TIM4->PSC = 64000; //prescaler 64000 (max 65535) on 64MHz clock means timer tick at 1Khz
-	TIM4->ARR = 500; //timer interrupt trigger after 1000 ticks, so 1 second interrupt freq
-	TIM4->CR1 |= TIM_CR1_URS | TIM_CR1_DIR; //overflow/underflow interrupt, count down
-	TIM4->DIER |= TIM_DIER_UIE; // update interrupt ENABLED
-	TIM4->CR1 |= TIM_CR1_CEN; //enable the counter
-
-	//disable all interrupts
-	//__disable_irq();
-	NVIC_EnableIRQ(DMA1_Stream0_IRQn); //enable dma1_stream0 interrupts
-	NVIC_EnableIRQ(DMA1_Stream1_IRQn); //enable dma1_stream1 interrupts
-	NVIC_EnableIRQ(TIM4_IRQn); //enable timer 4 interrupts
-	////re-enable all global interrupts
-	//__enable_irq();
-	//--------------------------------------------------------------------------------
+	board_init();
 
 	//blink 10 times quickly
 	for(int i=0;i<10;i++){
@@ -132,13 +190,39 @@ int main(void){
 		GPIOB->BSRR = GPIO_BSRR_BR14; //reset bit
 		idle_delay(50);
 	}
+	// observation: when usb is plugged in, DMA fails
+	usart_dma10_printf(USART3, "board init ok.\r\n");
 
-	char test[] = "hello world!\r\n";
-	usart_printf(USART3, test);
+	tusb_init();
+	usart_dma10_printf(USART3, "tinyusb init ok.\r\n");
 
-	test[0] = 'y';
-	usart_dma10_printf(USART3, test);
+	/* initialize lwip, dhcp-server, dns-server, and http */
+	init_lwip();
+	while (!netif_is_up(&netif_data));
+	while (dhserv_init(&dhcp_config) != ERR_OK);
+	while (dnserv_init(&ipaddr, 53, dns_query_proc) != ERR_OK);
+	httpd_init();
+	usart_dma10_printf(USART3, "httpd init ok.\r\n");
 
-	while(1){
+	while (1)
+	{
+		tud_task();
+		service_traffic();
 	}
+}
+
+/* lwip has provision for using a mutex, when applicable */
+sys_prot_t sys_arch_protect(void)
+{
+	return 0;
+}
+void sys_arch_unprotect(sys_prot_t pval)
+{
+	(void)pval;
+}
+
+/* lwip needs a millisecond time source, and the TinyUSB board support code has one available */
+uint32_t sys_now(void)
+{
+	return board_millis();
 }

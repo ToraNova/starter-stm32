@@ -5,6 +5,9 @@ DEPS_SUBMODULES += st/cmsis_device_$(ST_FAMILY)
 
 ST_CMSIS = st/cmsis_device_$(ST_FAMILY)
 
+# Default is FulSpeed port
+PORT ?= 0
+
 CFLAGS += \
   -flto \
   -mthumb \
