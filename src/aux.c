@@ -24,10 +24,8 @@ void board_init(void){
 	// enable GPIOB and GPIOE clock
 	GPIOB->MODER &= ~GPIO_MODER_MODE0; //reset mode config to b00
 	GPIOB->MODER |= (0b01 << GPIO_MODER_MODE0_Pos); //set mode config to b01 (output)
-	//configure pin 14 on gpiob
 	GPIOB->MODER &= ~GPIO_MODER_MODE14;
 	GPIOB->MODER |= (0b01 << GPIO_MODER_MODE14_Pos); //set mode config to b01 (output)
-
 	GPIOE->MODER &= ~GPIO_MODER_MODE1;
 	GPIOE->MODER |= (0b01 << GPIO_MODER_MODE1_Pos); //set mode config to b01 (output)
 
@@ -108,9 +106,10 @@ void board_init(void){
 	GPIOA->PUPDR |= (0b01 << GPIO_PUPDR_PUPD10_Pos); //pull up for pin 10
 
 	// Enable VBUS sense (B device) via pin PA9
-	USB_OTG_FS->GCCFG |= USB_OTG_GCCFG_VBDEN;
+	// THE ORDER IS IMPORTANT!!!!!
   	SET_BIT (PWR->CR3, PWR_CR3_USB33DEN); //enable usb voltage detector
 	RCC->AHB1ENR |= RCC_AHB1ENR_USB2OTGHSEN; //enable usb otg full speed clock
+	USB_OTG_FS->GCCFG |= USB_OTG_GCCFG_VBDEN;
 
 	//disable all interrupts
 	//__disable_irq();
