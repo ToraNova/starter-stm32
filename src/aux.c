@@ -12,162 +12,16 @@ uint32_t board_millis(void){
 	return sys_msticks;
 }
 
-uint32_t sysclk_pll_hse_freq(void){
-	uint32_t pllp, pllm, pllfracen;
-	float fracn1, pllvco;
-	pllm = ((RCC->PLLCKSELR & RCC_PLLCKSELR_DIVM1)>> 4)  ;
-	pllfracen = ((RCC-> PLLCFGR & RCC_PLLCFGR_PLL1FRACEN)>>RCC_PLLCFGR_PLL1FRACEN_Pos);
-	fracn1 = (float)(uint32_t)(pllfracen* ((RCC->PLL1FRACR & RCC_PLL1FRACR_FRACN1)>> 3));
-        pllvco = ((float)HSE_VALUE / (float)pllm) * ((float)(uint32_t)(RCC->PLL1DIVR & RCC_PLL1DIVR_N1) + (fracn1/(float)0x2000) +(float)1 );
-	pllp = (((RCC->PLL1DIVR & RCC_PLL1DIVR_P1) >>9) + 1U ) ;
-	return (uint32_t)(float)(pllvco/(float)pllp);
-}
-
 void board_init(void){
-	// RCC initialization according to tinyusb stm32h7nucleo board example
-	// using high speed external oscillator (8MHz)
-  	uint32_t common_system_clock;
-	RCC->CR |= RCC_CR_HSEON;
-	while( !(RCC->CR & RCC_CR_HSERDY) ); //wait for HSE to be ready
-	while( (RCC->CFGR & RCC_CFGR_SWS) == RCC_CFGR_SWS_PLL1 );//ensure PLL1 is not sysclock
-	CLEAR_BIT(RCC->CR, RCC_CR_PLL1ON); //disable PLL1
-	while( (RCC->CR & RCC_CR_PLLRDY) ); //wait for PLL to be disabled
-	__HAL_RCC_PLL_CONFIG( RCC_CFGR_SW_HSE, HSE_VALUE/1000000, 336, 2, 7, 2);
-	CLEAR_BIT(RCC->PLLCFGR, RCC_PLLCFGR_PLL1FRACEN); //stop frac
-	MODIFY_REG(RCC->PLL1FRACR, RCC_PLL1FRACR_FRACN1, 0 << RCC_PLL1FRACR_FRACN1_Pos);
-	MODIFY_REG(RCC->PLLCFGR, RCC_PLLCFGR_PLL1RGE, RCC_PLLCFGR_PLL1RGE_0);
-	MODIFY_REG(RCC->PLLCFGR, RCC_PLLCFGR_PLL1VCOSEL, RCC_PLLCFGR_PLL1VCOSEL);
-	SET_BIT(RCC->PLLCFGR, RCC_PLLCFGR_DIVP1EN);
-	SET_BIT(RCC->PLLCFGR, RCC_PLLCFGR_DIVQ1EN);
-	SET_BIT(RCC->PLLCFGR, RCC_PLLCFGR_DIVR1EN);
-	SET_BIT(RCC->PLLCFGR, RCC_PLLCFGR_PLL1FRACEN); //enable  frac
-	SET_BIT(RCC->CR, RCC_CR_PLL1ON); //re-enable PLL
-	while( !(RCC->CR & RCC_CR_PLLRDY) ); //wait for PLL to be re-enabled
 
-	if ( FLASH_ACR_LATENCY_4WS > (READ_BIT((FLASH->ACR), FLASH_ACR_LATENCY))){
-		MODIFY_REG(FLASH->ACR, FLASH_ACR_LATENCY, FLASH_ACR_LATENCY_4WS);
-		while((READ_BIT((FLASH->ACR), FLASH_ACR_LATENCY)) != FLASH_ACR_LATENCY_4WS);
-	}
-#if defined (RCC_D1CFGR_D1PPRE)
-	if( RCC_D1CFGR_D1PPRE_DIV2 > (RCC->D1CFGR & RCC_D1CFGR_D1PPRE)){
-		MODIFY_REG(RCC->D1CFGR, RCC_D1CFGR_D1PPRE, RCC_D1CFGR_D1PPRE_DIV2);
-	}
-#else
-#error please refer to stm32h7xx_hal_rcc.c line 921
-#endif
+	sysclk_pll_hse_init();
 
-#if defined (RCC_D2CFGR_D2PPRE1)
-	if( RCC_D2CFGR_D2PPRE1_DIV2 > (RCC->D2CFGR & RCC_D2CFGR_D2PPRE1)){
-		MODIFY_REG(RCC->D2CFGR, RCC_D2CFGR_D2PPRE1, RCC_D2CFGR_D2PPRE1_DIV2);
-	}
-#else
-#error please refer to stm32h7xx_hal_rcc.c line 939
-#endif
-
-#if defined(RCC_D2CFGR_D2PPRE2)
-	if( RCC_D2CFGR_D2PPRE2_DIV2 > (RCC->D2CFGR & RCC_D2CFGR_D2PPRE2)){
-		MODIFY_REG(RCC->D2CFGR, RCC_D2CFGR_D2PPRE2, RCC_D2CFGR_D2PPRE2_DIV2);
-	}
-#else
-#error please refer to stm32h7xx_hal_rcc.c line 956
-#endif
-
-#if defined(RCC_D3CFGR_D3PPRE)
-	if(RCC_D3CFGR_D3PPRE_DIV2 > (RCC->D3CFGR & RCC_D3CFGR_D3PPRE)) {
-		MODIFY_REG(RCC->D3CFGR, RCC_D3CFGR_D3PPRE, RCC_D3CFGR_D3PPRE_DIV2 );
-	}
-#else
-#error please refer to stm32h7xx_hal_rcc.c line 974
-#endif
-
-#if defined (RCC_D1CFGR_HPRE)
-    	//if(RCC_D1CFGR_HPRE_DIV1 > (RCC->D1CFGR & RCC_D1CFGR_HPRE)){
-	//	MODIFY_REG(RCC->D1CFGR, RCC_D1CFGR_HPRE, RCC_D1CFGR_HPRE_DIV1);
-	//}
-#else
-#error please refer to stm32h7xx_hal_rcc.c line 992
-#endif
-
-#if defined(RCC_D1CFGR_D1CPRE)
-	MODIFY_REG(RCC->D1CFGR, RCC_D1CFGR_D1CPRE, RCC_D1CFGR_D1CPRE_DIV1);
-#else
-#error please refer to stm32h7xx_hal_rcc.c line 1014
-#endif
-
-      	MODIFY_REG(RCC->CFGR, RCC_CFGR_SW, RCC_CFGR_SW_PLL1);
-	while(((uint32_t)(RCC->CFGR & RCC_CFGR_SWS)) != (RCC_CFGR_SW_PLL1 << RCC_CFGR_SWS_Pos));
-
-#if defined(RCC_D1CFGR_HPRE)
-	if(RCC_D1CFGR_HPRE_DIV1 < (RCC->D1CFGR & RCC_D1CFGR_HPRE)) {
-		MODIFY_REG(RCC->D1CFGR, RCC_D1CFGR_HPRE, RCC_D1CFGR_HPRE_DIV1);
-	}
-#else
-#error please refer to stm32h7xx_hal_rcc.c line 1074
-#endif
-
-	if ( FLASH_ACR_LATENCY_4WS < (READ_BIT((FLASH->ACR), FLASH_ACR_LATENCY))){
-		MODIFY_REG(FLASH->ACR, FLASH_ACR_LATENCY, FLASH_ACR_LATENCY_4WS);
-		while((READ_BIT((FLASH->ACR), FLASH_ACR_LATENCY)) != FLASH_ACR_LATENCY_4WS);
-	}
-
-#if defined (RCC_D1CFGR_D1PPRE)
-	if( RCC_D1CFGR_D1PPRE_DIV2 < (RCC->D1CFGR & RCC_D1CFGR_D1PPRE)){
-		MODIFY_REG(RCC->D1CFGR, RCC_D1CFGR_D1PPRE, RCC_D1CFGR_D1PPRE_DIV2);
-	}
-#else
-#error please refer to stm32h7xx_hal_rcc.c line 921
-#endif
-
-#if defined (RCC_D2CFGR_D2PPRE1)
-	if( RCC_D2CFGR_D2PPRE1_DIV2 < (RCC->D2CFGR & RCC_D2CFGR_D2PPRE1)){
-		MODIFY_REG(RCC->D2CFGR, RCC_D2CFGR_D2PPRE1, RCC_D2CFGR_D2PPRE1_DIV2);
-	}
-#else
-#error please refer to stm32h7xx_hal_rcc.c line 939
-#endif
-
-#if defined(RCC_D2CFGR_D2PPRE2)
-	if( RCC_D2CFGR_D2PPRE2_DIV2 < (RCC->D2CFGR & RCC_D2CFGR_D2PPRE2)){
-		MODIFY_REG(RCC->D2CFGR, RCC_D2CFGR_D2PPRE2, RCC_D2CFGR_D2PPRE2_DIV2);
-	}
-#else
-#error please refer to stm32h7xx_hal_rcc.c line 956
-#endif
-
-#if defined(RCC_D3CFGR_D3PPRE)
-	if(RCC_D3CFGR_D3PPRE_DIV2 > (RCC->D3CFGR & RCC_D3CFGR_D3PPRE)) {
-		MODIFY_REG(RCC->D3CFGR, RCC_D3CFGR_D3PPRE, RCC_D3CFGR_D3PPRE_DIV2 );
-	}
-#else
-#error please refer to stm32h7xx_hal_rcc.c line 974
-#endif
-
-	/* Update the SystemCoreClock global variable */
-#if defined(RCC_D1CFGR_D1CPRE)
-	common_system_clock = sysclk_pll_hse_freq() >> ((D1CorePrescTable[(RCC->D1CFGR & RCC_D1CFGR_D1CPRE)>> RCC_D1CFGR_D1CPRE_Pos]) & 0x1FU);
-#else
-	common_system_clock = sysclk_pll_hse_freq() >> ((D1CorePrescTable[(RCC->CDCFGR1 & RCC_CDCFGR1_CDCPRE)>> RCC_CDCFGR1_CDCPRE_Pos]) & 0x1FU);
-#endif
-
-#if defined(RCC_D1CFGR_HPRE)
-	SystemD2Clock = (common_system_clock >> ((D1CorePrescTable[(RCC->D1CFGR & RCC_D1CFGR_HPRE)>> RCC_D1CFGR_HPRE_Pos]) & 0x1FU));
-#else
-	SystemD2Clock = (common_system_clock >> ((D1CorePrescTable[(RCC->CDCFGR1 & RCC_CDCFGR1_HPRE)>> RCC_CDCFGR1_HPRE_Pos]) & 0x1FU));
-#endif
-
-#if defined(DUAL_CORE) && defined(CORE_CM4)
-	SystemCoreClock = SystemD2Clock;
-#else
-	SystemCoreClock = common_system_clock;
-#endif /* DUAL_CORE && CORE_CM4 */
-
-	// TODO: configure clock issues
-
-	// enable SRAM2 clock (used and accesible by DMA)
-	//RCC->AHB2ENR |= RCC_AHB2ENR_SRAM2EN; //seems to be unecessary
+	//enable all the gpio clocks
+	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOAEN | RCC_AHB4ENR_GPIOBEN | RCC_AHB4ENR_GPIOCEN;
+	RCC->AHB4ENR |= RCC_AHB4ENR_GPIODEN | RCC_AHB4ENR_GPIOEEN | RCC_AHB4ENR_GPIOGEN;
+	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOHEN | RCC_AHB4ENR_GPIOIEN | RCC_AHB4ENR_GPIOJEN;
 
 	// enable GPIOB and GPIOE clock
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOBEN | RCC_AHB4ENR_GPIOEEN;
 	GPIOB->MODER &= ~GPIO_MODER_MODE0; //reset mode config to b00
 	GPIOB->MODER |= (0b01 << GPIO_MODER_MODE0_Pos); //set mode config to b01 (output)
 	//configure pin 14 on gpiob
@@ -185,7 +39,6 @@ void board_init(void){
 
 	//------------------------USART EXAMPLE-------------------------------------------
 	//configure GPIOC pin 10 and 11 for alternate function mode (uart)
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOCEN;
 	GPIOC->MODER &= ~(GPIO_MODER_MODE10 | GPIO_MODER_MODE11); //default 0000
 	GPIOC->MODER |= (0b10 << GPIO_MODER_MODE10_Pos);
 	GPIOC->MODER |= (0b10 << GPIO_MODER_MODE11_Pos);
@@ -211,8 +64,9 @@ void board_init(void){
 	// USART init
 	RCC->APB1LENR |= RCC_APB1LENR_USART3EN;
 	USART3->CR3 |= USART_CR3_DMAT; //enable DMA xmit only. (USART_CR3_DMAR)
-	USART3->BRR = 0x1a0b; //see page 2058, stm32h743 defaults to internal clock @ 64MHz
-	//USART3->BRR = 6250;
+	//USART3->BRR = 0x1a0b; //see page 2058, stm32h743 defaults to internal clock @ 64MHz
+	// usart on 84MHz
+	USART3->BRR = (uint32_t) (84000000 / 9600);
 	//enable TX, RX and UART
 	USART3->CR1 |= USART_CR1_RE | USART_CR1_TE | USART_CR1_UE;
 	//read page 2048 for rx and tx operations
@@ -220,22 +74,21 @@ void board_init(void){
 
 	//------------------------TIMER INTERRUPT-----------------------------------------
 	// enable the timer4 clock to be gated by the rcc apb4lenr bus
-	RCC->APB1LENR |= RCC_APB1LENR_TIM4EN;
-	TIM4->PSC = 64000; //prescaler 64000 (max 65535) on 64MHz clock means timer tick at 1Khz
-	TIM4->ARR = 500; //timer interrupt trigger after 1000 ticks, so 1 second interrupt freq
+	RCC->APB1LENR |= RCC_APB1LENR_TIM4EN; //APB1 is on 168MHz
+	TIM4->PSC = 7200; //prescaler 64000 (max 65535) on 64MHz clock means timer tick at 1Khz
+	TIM4->ARR = 23333; //timer interrupt trigger after 1000 ticks, so 1 second interrupt freq
 	TIM4->CR1 |= TIM_CR1_URS | TIM_CR1_DIR; //overflow/underflow interrupt, count down
 	TIM4->DIER |= TIM_DIER_UIE; // update interrupt ENABLED
-	TIM4->CR1 |= TIM_CR1_CEN; //enable the counter
+	//TIM4->CR1 |= TIM_CR1_CEN; //enable the counter
 
 	//-----------------------USB clock configuration----------------------------------
 	// stm32h7xx_hal_rcc.h line 7534 and 277
-	RCC->PLLCFGR |= RCC_PLLCFGR_DIVQ1EN; //set PLLCFGR DIVQEN
+	SET_BIT(RCC->PLLCFGR, RCC_PLLCFGR_DIVQ1EN); //set PLLCFGR DIVQEN
 	// stm32h7xx_hal_rcc_ex.h line 3076
-	RCC->D2CCIP2R |= RCC_D2CCIP2R_USBSEL & RCC_D2CCIP2R_USBSEL_0;
+        MODIFY_REG(RCC->D2CCIP2R, RCC_D2CCIP2R_USBSEL, (uint32_t)RCC_D2CCIP2R_USBSEL_0);
 	// TODO: more configuration on the RCC initialization
 
 	//-----------------------USB IO configuration----------------------------------
-	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOAEN | RCC_AHB4ENR_GPIOHEN | RCC_AHB4ENR_GPIOIEN;
 	GPIOA->MODER &= ~(GPIO_MODER_MODE9 | GPIO_MODER_MODE10 | GPIO_MODER_MODE11 | GPIO_MODER_MODE12);
 	GPIOA->MODER |= (0b00 << GPIO_MODER_MODE9_Pos);
 	GPIOA->MODER |= (0b10 << GPIO_MODER_MODE10_Pos);
@@ -245,14 +98,18 @@ void board_init(void){
 	GPIOA->AFR[1] |= (0b1010 << GPIO_AFRH_AFSEL10_Pos); //AF10
 	GPIOA->AFR[1] |= (0b1010 << GPIO_AFRH_AFSEL11_Pos); //AF10
 	GPIOA->AFR[1] |= (0b1010 << GPIO_AFRH_AFSEL12_Pos); //AF10
+	GPIOA->OTYPER &= ~(GPIO_AFRH_AFSEL10);
+	GPIOA->OTYPER |= (GPIO_OTYPER_OT10);
 	GPIOA->OSPEEDR &= ~(GPIO_OSPEEDR_OSPEED10 | GPIO_OSPEEDR_OSPEED11 | GPIO_OSPEEDR_OSPEED12);
 	GPIOA->OSPEEDR |= (0b10 << GPIO_OSPEEDR_OSPEED10_Pos);
 	GPIOA->OSPEEDR |= (0b10 << GPIO_OSPEEDR_OSPEED11_Pos);
 	GPIOA->OSPEEDR |= (0b10 << GPIO_OSPEEDR_OSPEED12_Pos);
 	GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPD10);
 	GPIOA->PUPDR |= (0b01 << GPIO_PUPDR_PUPD10_Pos); //pull up for pin 10
+
 	// Enable VBUS sense (B device) via pin PA9
 	USB_OTG_FS->GCCFG |= USB_OTG_GCCFG_VBDEN;
+  	SET_BIT (PWR->CR3, PWR_CR3_USB33DEN); //enable usb voltage detector
 	RCC->AHB1ENR |= RCC_AHB1ENR_USB2OTGHSEN; //enable usb otg full speed clock
 
 	//disable all interrupts
@@ -260,6 +117,7 @@ void board_init(void){
 	NVIC_EnableIRQ(DMA1_Stream0_IRQn); //enable dma1_stream0 interrupts
 	//NVIC_EnableIRQ(DMA1_Stream1_IRQn); //enable dma1_stream1 interrupts
 	NVIC_EnableIRQ(TIM4_IRQn); //enable timer 4 interrupts
+	//NVIC_EnableIRQ(OTG_FS_IRQn); //enable otg interrupts
 	////re-enable all global interrupts
 	//__enable_irq();
 	//--------------------------------------------------------------------------------

@@ -13,6 +13,9 @@ void usart_printf(USART_TypeDef *usart,const char *msg, ...) __attribute__ ((for
 void usart_print32(USART_TypeDef *usart, uint32_t regval);
 char usart_getc(USART_TypeDef *usart);
 
+uint32_t sysclk_pll_hse_freq(void);
+void sysclk_pll_hse_init(void);
+
 #ifdef __cplusplus
 }
 #endif

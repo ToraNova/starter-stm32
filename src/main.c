@@ -181,8 +181,8 @@ void tud_network_init_cb(void)
 }
 
 int main(void){
-	board_init();
 
+	board_init();
 	//blink 10 times quickly
 	for(int i=0;i<10;i++){
 		GPIOB->BSRR = GPIO_BSRR_BS14; //set bit
@@ -204,6 +204,7 @@ int main(void){
 	httpd_init();
 	usart_printf(USART3, "httpd init ok.\r\n");
 
+	TIM4->CR1 |= TIM_CR1_CEN; //enable the counter
 	while (1)
 	{
 		tud_task();
@@ -240,4 +241,3 @@ void OTG_HS_IRQHandler(void)
 {
 	tud_int_handler(1);
 }
-
