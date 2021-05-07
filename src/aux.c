@@ -4,6 +4,7 @@
 #include <inttypes.h>
 #include "stm32h743xx.h"
 #include "aux.h"
+#include "halper.h"
 
 uint32_t volatile sys_msticks;// counter for systicks
 
@@ -11,7 +12,157 @@ uint32_t board_millis(void){
 	return sys_msticks;
 }
 
+uint32_t sysclk_pll_hse_freq(void){
+	uint32_t pllp, pllm, pllfracen;
+	float fracn1, pllvco;
+	pllm = ((RCC->PLLCKSELR & RCC_PLLCKSELR_DIVM1)>> 4)  ;
+	pllfracen = ((RCC-> PLLCFGR & RCC_PLLCFGR_PLL1FRACEN)>>RCC_PLLCFGR_PLL1FRACEN_Pos);
+	fracn1 = (float)(uint32_t)(pllfracen* ((RCC->PLL1FRACR & RCC_PLL1FRACR_FRACN1)>> 3));
+        pllvco = ((float)HSE_VALUE / (float)pllm) * ((float)(uint32_t)(RCC->PLL1DIVR & RCC_PLL1DIVR_N1) + (fracn1/(float)0x2000) +(float)1 );
+	pllp = (((RCC->PLL1DIVR & RCC_PLL1DIVR_P1) >>9) + 1U ) ;
+	return (uint32_t)(float)(pllvco/(float)pllp);
+}
+
 void board_init(void){
+	// RCC initialization according to tinyusb stm32h7nucleo board example
+	// using high speed external oscillator (8MHz)
+  	uint32_t common_system_clock;
+	RCC->CR |= RCC_CR_HSEON;
+	while( !(RCC->CR & RCC_CR_HSERDY) ); //wait for HSE to be ready
+	while( (RCC->CFGR & RCC_CFGR_SWS) == RCC_CFGR_SWS_PLL1 );//ensure PLL1 is not sysclock
+	CLEAR_BIT(RCC->CR, RCC_CR_PLL1ON); //disable PLL1
+	while( (RCC->CR & RCC_CR_PLLRDY) ); //wait for PLL to be disabled
+	__HAL_RCC_PLL_CONFIG( RCC_CFGR_SW_HSE, HSE_VALUE/1000000, 336, 2, 7, 2);
+	CLEAR_BIT(RCC->PLLCFGR, RCC_PLLCFGR_PLL1FRACEN); //stop frac
+	MODIFY_REG(RCC->PLL1FRACR, RCC_PLL1FRACR_FRACN1, 0 << RCC_PLL1FRACR_FRACN1_Pos);
+	MODIFY_REG(RCC->PLLCFGR, RCC_PLLCFGR_PLL1RGE, RCC_PLLCFGR_PLL1RGE_0);
+	MODIFY_REG(RCC->PLLCFGR, RCC_PLLCFGR_PLL1VCOSEL, RCC_PLLCFGR_PLL1VCOSEL);
+	SET_BIT(RCC->PLLCFGR, RCC_PLLCFGR_DIVP1EN);
+	SET_BIT(RCC->PLLCFGR, RCC_PLLCFGR_DIVQ1EN);
+	SET_BIT(RCC->PLLCFGR, RCC_PLLCFGR_DIVR1EN);
+	SET_BIT(RCC->PLLCFGR, RCC_PLLCFGR_PLL1FRACEN); //enable  frac
+	SET_BIT(RCC->CR, RCC_CR_PLL1ON); //re-enable PLL
+	while( !(RCC->CR & RCC_CR_PLLRDY) ); //wait for PLL to be re-enabled
+
+	if ( FLASH_ACR_LATENCY_4WS > (READ_BIT((FLASH->ACR), FLASH_ACR_LATENCY))){
+		MODIFY_REG(FLASH->ACR, FLASH_ACR_LATENCY, FLASH_ACR_LATENCY_4WS);
+		while((READ_BIT((FLASH->ACR), FLASH_ACR_LATENCY)) != FLASH_ACR_LATENCY_4WS);
+	}
+#if defined (RCC_D1CFGR_D1PPRE)
+	if( RCC_D1CFGR_D1PPRE_DIV2 > (RCC->D1CFGR & RCC_D1CFGR_D1PPRE)){
+		MODIFY_REG(RCC->D1CFGR, RCC_D1CFGR_D1PPRE, RCC_D1CFGR_D1PPRE_DIV2);
+	}
+#else
+#error please refer to stm32h7xx_hal_rcc.c line 921
+#endif
+
+#if defined (RCC_D2CFGR_D2PPRE1)
+	if( RCC_D2CFGR_D2PPRE1_DIV2 > (RCC->D2CFGR & RCC_D2CFGR_D2PPRE1)){
+		MODIFY_REG(RCC->D2CFGR, RCC_D2CFGR_D2PPRE1, RCC_D2CFGR_D2PPRE1_DIV2);
+	}
+#else
+#error please refer to stm32h7xx_hal_rcc.c line 939
+#endif
+
+#if defined(RCC_D2CFGR_D2PPRE2)
+	if( RCC_D2CFGR_D2PPRE2_DIV2 > (RCC->D2CFGR & RCC_D2CFGR_D2PPRE2)){
+		MODIFY_REG(RCC->D2CFGR, RCC_D2CFGR_D2PPRE2, RCC_D2CFGR_D2PPRE2_DIV2);
+	}
+#else
+#error please refer to stm32h7xx_hal_rcc.c line 956
+#endif
+
+#if defined(RCC_D3CFGR_D3PPRE)
+	if(RCC_D3CFGR_D3PPRE_DIV2 > (RCC->D3CFGR & RCC_D3CFGR_D3PPRE)) {
+		MODIFY_REG(RCC->D3CFGR, RCC_D3CFGR_D3PPRE, RCC_D3CFGR_D3PPRE_DIV2 );
+	}
+#else
+#error please refer to stm32h7xx_hal_rcc.c line 974
+#endif
+
+#if defined (RCC_D1CFGR_HPRE)
+    	//if(RCC_D1CFGR_HPRE_DIV1 > (RCC->D1CFGR & RCC_D1CFGR_HPRE)){
+	//	MODIFY_REG(RCC->D1CFGR, RCC_D1CFGR_HPRE, RCC_D1CFGR_HPRE_DIV1);
+	//}
+#else
+#error please refer to stm32h7xx_hal_rcc.c line 992
+#endif
+
+#if defined(RCC_D1CFGR_D1CPRE)
+	MODIFY_REG(RCC->D1CFGR, RCC_D1CFGR_D1CPRE, RCC_D1CFGR_D1CPRE_DIV1);
+#else
+#error please refer to stm32h7xx_hal_rcc.c line 1014
+#endif
+
+      	MODIFY_REG(RCC->CFGR, RCC_CFGR_SW, RCC_CFGR_SW_PLL1);
+	while(((uint32_t)(RCC->CFGR & RCC_CFGR_SWS)) != (RCC_CFGR_SW_PLL1 << RCC_CFGR_SWS_Pos));
+
+#if defined(RCC_D1CFGR_HPRE)
+	if(RCC_D1CFGR_HPRE_DIV1 < (RCC->D1CFGR & RCC_D1CFGR_HPRE)) {
+		MODIFY_REG(RCC->D1CFGR, RCC_D1CFGR_HPRE, RCC_D1CFGR_HPRE_DIV1);
+	}
+#else
+#error please refer to stm32h7xx_hal_rcc.c line 1074
+#endif
+
+	if ( FLASH_ACR_LATENCY_4WS < (READ_BIT((FLASH->ACR), FLASH_ACR_LATENCY))){
+		MODIFY_REG(FLASH->ACR, FLASH_ACR_LATENCY, FLASH_ACR_LATENCY_4WS);
+		while((READ_BIT((FLASH->ACR), FLASH_ACR_LATENCY)) != FLASH_ACR_LATENCY_4WS);
+	}
+
+#if defined (RCC_D1CFGR_D1PPRE)
+	if( RCC_D1CFGR_D1PPRE_DIV2 < (RCC->D1CFGR & RCC_D1CFGR_D1PPRE)){
+		MODIFY_REG(RCC->D1CFGR, RCC_D1CFGR_D1PPRE, RCC_D1CFGR_D1PPRE_DIV2);
+	}
+#else
+#error please refer to stm32h7xx_hal_rcc.c line 921
+#endif
+
+#if defined (RCC_D2CFGR_D2PPRE1)
+	if( RCC_D2CFGR_D2PPRE1_DIV2 < (RCC->D2CFGR & RCC_D2CFGR_D2PPRE1)){
+		MODIFY_REG(RCC->D2CFGR, RCC_D2CFGR_D2PPRE1, RCC_D2CFGR_D2PPRE1_DIV2);
+	}
+#else
+#error please refer to stm32h7xx_hal_rcc.c line 939
+#endif
+
+#if defined(RCC_D2CFGR_D2PPRE2)
+	if( RCC_D2CFGR_D2PPRE2_DIV2 < (RCC->D2CFGR & RCC_D2CFGR_D2PPRE2)){
+		MODIFY_REG(RCC->D2CFGR, RCC_D2CFGR_D2PPRE2, RCC_D2CFGR_D2PPRE2_DIV2);
+	}
+#else
+#error please refer to stm32h7xx_hal_rcc.c line 956
+#endif
+
+#if defined(RCC_D3CFGR_D3PPRE)
+	if(RCC_D3CFGR_D3PPRE_DIV2 > (RCC->D3CFGR & RCC_D3CFGR_D3PPRE)) {
+		MODIFY_REG(RCC->D3CFGR, RCC_D3CFGR_D3PPRE, RCC_D3CFGR_D3PPRE_DIV2 );
+	}
+#else
+#error please refer to stm32h7xx_hal_rcc.c line 974
+#endif
+
+	/* Update the SystemCoreClock global variable */
+#if defined(RCC_D1CFGR_D1CPRE)
+	common_system_clock = sysclk_pll_hse_freq() >> ((D1CorePrescTable[(RCC->D1CFGR & RCC_D1CFGR_D1CPRE)>> RCC_D1CFGR_D1CPRE_Pos]) & 0x1FU);
+#else
+	common_system_clock = sysclk_pll_hse_freq() >> ((D1CorePrescTable[(RCC->CDCFGR1 & RCC_CDCFGR1_CDCPRE)>> RCC_CDCFGR1_CDCPRE_Pos]) & 0x1FU);
+#endif
+
+#if defined(RCC_D1CFGR_HPRE)
+	SystemD2Clock = (common_system_clock >> ((D1CorePrescTable[(RCC->D1CFGR & RCC_D1CFGR_HPRE)>> RCC_D1CFGR_HPRE_Pos]) & 0x1FU));
+#else
+	SystemD2Clock = (common_system_clock >> ((D1CorePrescTable[(RCC->CDCFGR1 & RCC_CDCFGR1_HPRE)>> RCC_CDCFGR1_HPRE_Pos]) & 0x1FU));
+#endif
+
+#if defined(DUAL_CORE) && defined(CORE_CM4)
+	SystemCoreClock = SystemD2Clock;
+#else
+	SystemCoreClock = common_system_clock;
+#endif /* DUAL_CORE && CORE_CM4 */
+
+	// TODO: configure clock issues
+
 	// enable SRAM2 clock (used and accesible by DMA)
 	//RCC->AHB2ENR |= RCC_AHB2ENR_SRAM2EN; //seems to be unecessary
 
@@ -61,6 +212,7 @@ void board_init(void){
 	RCC->APB1LENR |= RCC_APB1LENR_USART3EN;
 	USART3->CR3 |= USART_CR3_DMAT; //enable DMA xmit only. (USART_CR3_DMAR)
 	USART3->BRR = 0x1a0b; //see page 2058, stm32h743 defaults to internal clock @ 64MHz
+	//USART3->BRR = 6250;
 	//enable TX, RX and UART
 	USART3->CR1 |= USART_CR1_RE | USART_CR1_TE | USART_CR1_UE;
 	//read page 2048 for rx and tx operations
@@ -80,11 +232,12 @@ void board_init(void){
 	RCC->PLLCFGR |= RCC_PLLCFGR_DIVQ1EN; //set PLLCFGR DIVQEN
 	// stm32h7xx_hal_rcc_ex.h line 3076
 	RCC->D2CCIP2R |= RCC_D2CCIP2R_USBSEL & RCC_D2CCIP2R_USBSEL_0;
-	// TODO: possible more configuration?
+	// TODO: more configuration on the RCC initialization
 
 	//-----------------------USB IO configuration----------------------------------
 	RCC->AHB4ENR |= RCC_AHB4ENR_GPIOAEN | RCC_AHB4ENR_GPIOHEN | RCC_AHB4ENR_GPIOIEN;
-	GPIOA->MODER &= ~(GPIO_MODER_MODE10 | GPIO_MODER_MODE11 | GPIO_MODER_MODE12);
+	GPIOA->MODER &= ~(GPIO_MODER_MODE9 | GPIO_MODER_MODE10 | GPIO_MODER_MODE11 | GPIO_MODER_MODE12);
+	GPIOA->MODER |= (0b00 << GPIO_MODER_MODE9_Pos);
 	GPIOA->MODER |= (0b10 << GPIO_MODER_MODE10_Pos);
 	GPIOA->MODER |= (0b10 << GPIO_MODER_MODE11_Pos);
 	GPIOA->MODER |= (0b10 << GPIO_MODER_MODE12_Pos);
@@ -98,7 +251,8 @@ void board_init(void){
 	GPIOA->OSPEEDR |= (0b10 << GPIO_OSPEEDR_OSPEED12_Pos);
 	GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPD10);
 	GPIOA->PUPDR |= (0b01 << GPIO_PUPDR_PUPD10_Pos); //pull up for pin 10
-
+	// Enable VBUS sense (B device) via pin PA9
+	USB_OTG_FS->GCCFG |= USB_OTG_GCCFG_VBDEN;
 	RCC->AHB1ENR |= RCC_AHB1ENR_USB2OTGHSEN; //enable usb otg full speed clock
 
 	//disable all interrupts
@@ -165,11 +319,11 @@ void DMA1_Stream1_IRQHandler(void){
 // https://embedds.com/programming-stm32-discovery-using-gnu-tools-startup-code/
 // https://electronics.stackexchange.com/questions/389830/tim2-dma-configuration-for-stm32h7
 /*
-  .ram2 (NOLOAD) :
-  {
-    KEEP(*(.sram2))
-  } > RAM_D2
-*/
+   .ram2 (NOLOAD) :
+   {
+   KEEP(*(.sram2))
+   } > RAM_D2
+   */
 char __attribute__ ((section(".sram2"))) dma10_buf[128];
 
 void usart_dma10_printf(USART_TypeDef *usart, const char *msg,...){

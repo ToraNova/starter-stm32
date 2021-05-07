@@ -17,7 +17,7 @@ CFLAGS += \
   -mfpu=fpv5-d16 \
   -nostdlib -nostartfiles \
   -DSTM32H743xx \
-  -DHSE_VALUE=32768 \
+  -DHSE_VALUE=8000000
 
 SRC_S += $(ST_CMSIS)/Source/Templates/gcc/startup_stm32h743xx.s
 LD_FILE = linker_scripts/stm32h743xx_flash_sram2.ld
