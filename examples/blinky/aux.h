@@ -5,7 +5,6 @@
 extern "C" {
 #endif
 
-void usart_dma10_printf(USART_TypeDef *usart, const char *msg,...) __attribute__ ((format (printf, 2, 3)));
 void usart_printf(USART_TypeDef *usart,const char *msg, ...) __attribute__ ((format (printf, 2, 3)));
 void usart_print32(USART_TypeDef *usart, uint32_t regval);
 char usart_getc(USART_TypeDef *usart);

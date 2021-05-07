@@ -17,7 +17,7 @@ CFLAGS += \
   -DHSE_VALUE=32768 \
 
 SRC_S += $(ST_CMSIS)/Source/Templates/gcc/startup_stm32h743xx.s
-LD_FILE = linker_scripts/stm32h743xx_flash.ld
+LD_FILE = linker_scripts/stm32h743xx_flash_sram2.ld
 
 # For flash-jlink target
 JLINK_DEVICE = stm32h743zi
