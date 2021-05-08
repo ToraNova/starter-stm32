@@ -7,8 +7,8 @@
 PROJECT := template_project
 
 # TODO: project source location
-SRC_PROJECT := src
-#SRC_PROJECT := examples/dmatx
+#SRC_PROJECT := src
+SRC_PROJECT := examples/usb_eth
 
 # TODO: change the following to select for diff boards
 include nucleoh743zi2.mk
