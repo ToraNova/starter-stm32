@@ -56,7 +56,7 @@
 
 #define LWIP_SINGLE_NETIF               1
 
-//#define PPP_SUPPORT 			1
-//#define PPPOS_SUPPORT 		1
+#define PPP_SUPPORT 			1
+#define PPPOS_SUPPORT 			1
 
 #endif /* __LWIPOPTS_H__ */

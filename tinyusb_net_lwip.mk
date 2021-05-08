@@ -51,6 +51,9 @@ SRC_C += \
 	libs/lwip/src/core/ipv4/ip4_frag.c \
 	libs/lwip/src/netif/ethernet.c \
 	libs/lwip/src/netif/slipif.c \
+	libs/lwip/src/netif/ppp/ppp.c \
+	libs/lwip/src/netif/ppp/pppos.c \
+	libs/lwip/src/netif/ppp/magic.c \
 	libs/lwip/src/apps/http/httpd.c \
 	libs/lwip/src/apps/http/fs.c \
 	libs/networking/dhserver.c \

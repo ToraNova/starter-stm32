@@ -191,10 +191,11 @@ int main(void){
 		idle_delay(50);
 	}
 	// observation: when usb is plugged in, DMA fails
-	usart_printf(USART3, "board init ok.\r\n");
+	logger_printf("board init and logger ok.\r\n");
+	serial_write( (uint8_t *)"usart3 ok.\r\n", 12);
 
 	tusb_init();
-	usart_printf(USART3, "tinyusb init ok.\r\n");
+	logger_printf("tinyusb init ok.\r\n");
 
 	/* initialize lwip, dhcp-server, dns-server, and http */
 	init_lwip();
@@ -202,7 +203,7 @@ int main(void){
 	while (dhserv_init(&dhcp_config) != ERR_OK);
 	while (dnserv_init(&ipaddr, 53, dns_query_proc) != ERR_OK);
 	httpd_init();
-	usart_printf(USART3, "httpd init ok.\r\n");
+	logger_printf("httpd init ok.\r\n");
 
 	TIM4->CR1 |= TIM_CR1_CEN; //enable the counter
 	while (1)
@@ -228,16 +229,7 @@ uint32_t sys_now(void)
 	return board_millis();
 }
 
-// Despite being call USB2_OTG
-// OTG_FS is marked as RHPort0 by TinyUSB to be consistent across stm32 port
-void OTG_FS_IRQHandler(void)
+uint32_t sys_jiffies(void)
 {
-	tud_int_handler(0);
-}
-
-// Despite being call USB2_OTG
-// OTG_HS is marked as RHPort1 by TinyUSB to be consistent across stm32 port
-void OTG_HS_IRQHandler(void)
-{
-	tud_int_handler(1);
+	return board_millis();
 }
