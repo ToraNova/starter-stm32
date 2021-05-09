@@ -1,16 +1,6 @@
 #include "aux.h"
 #include "pppd.h"
 
-#include "stm32h743xx.h" //tmp
-void serial_read_callback(const uint8_t *buf, uint16_t len){
-	logger_printf("sercb: received (%u) [", len);
-	for(uint16_t i=0; i<len; i++){
-		logger_printf("%02x",buf[i]);
-	}
-	logger_printf("].\r\n");
-	//GPIOB->BSRR = GPIO_BSRR_BS0; //set bit
-}
-
 void ppp_link_status_cb(ppp_pcb *pcb, int err_code, void *ctx){
 	struct netif *pppif = ppp_netif(pcb);
 	LWIP_UNUSED_ARG(ctx);
@@ -67,13 +57,13 @@ void ppp_link_status_cb(ppp_pcb *pcb, int err_code, void *ctx){
 }
 
 // Callback used by ppp connection
-uint32_t ppp_output_cb(ppp_pcb *pcb, u8_t *data, u32_t len, void *ctx){
+uint32_t ppp_output_cb(ppp_pcb *pcb, const void *data, u32_t len, void *ctx){
 	LWIP_UNUSED_ARG(pcb);
 	LWIP_UNUSED_ARG(ctx);
 	if(len > SERIAL_WRITE_MAX_LEN){
 		logger_printf("pppos_output_cb: overflow warning.\n\r");
 	}
-	serial_write(data, len);
-	logger_printf("pppos_output_cb: len = %ld.\n\r", len);
+	serial_write( (uint8_t *) data, len);
+	logger_printf("pppos_output_cb: sent (%ld).\n\r", len);
 	return len;
 }

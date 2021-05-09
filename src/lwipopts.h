@@ -54,9 +54,16 @@
 #define LWIP_HTTPD_SSI                  0
 #define LWIP_HTTPD_SSI_INCLUDE_TAG      0
 
-#define LWIP_SINGLE_NETIF               1
+//#define LWIP_SINGLE_NETIF               1
 
 #define PPP_SUPPORT 			1
 #define PPPOS_SUPPORT 			1
+
+#define LCP_ECHOINTERVAL 		10
+#define LCP_MAXECHOFAILS 		4
+
+#define VJ_SUPPORT 			1
+#define CCP_SUPPORT 			1
+#define MPPE_SUPPORT 			1
 
 #endif /* __LWIPOPTS_H__ */

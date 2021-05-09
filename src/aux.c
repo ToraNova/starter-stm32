@@ -83,7 +83,8 @@ void board_init(void){
 	DMA1_Stream0->CR |= DMA_SxCR_TRBUFF | DMA_SxCR_MINC | (0b01 << DMA_SxCR_DIR_Pos) | DMA_SxCR_TCIE | DMA_SxCR_TEIE;
 	// dir 00 -> peripheral to memory (RX)
 	// also uses circular mode
-	DMA1_Stream1->CR |= DMA_SxCR_CIRC | DMA_SxCR_TRBUFF | DMA_SxCR_MINC | (0b00 << DMA_SxCR_DIR_Pos) | DMA_SxCR_TCIE | DMA_SxCR_TEIE | DMA_SxCR_HTIE;
+	//DMA1_Stream1->CR |= DMA_SxCR_CIRC | DMA_SxCR_TRBUFF | DMA_SxCR_MINC | (0b00 << DMA_SxCR_DIR_Pos) | DMA_SxCR_TCIE | DMA_SxCR_TEIE | DMA_SxCR_HTIE;
+	DMA1_Stream1->CR |= DMA_SxCR_CIRC | DMA_SxCR_TRBUFF | DMA_SxCR_MINC | (0b00 << DMA_SxCR_DIR_Pos) | DMA_SxCR_TCIE | DMA_SxCR_TEIE;
 	// we configure the Stream1 address since it will always be enabled
 	DMA1_Stream1->M0AR = (uint32_t) dma_rx_buf;
 	DMA1_Stream1->PAR  = (uint32_t) &(USART3->RDR);
@@ -113,7 +114,7 @@ void board_init(void){
 	TIM4->ARR = 23333; //timer interrupt trigger after 1000 ticks, so 1 second interrupt freq
 	TIM4->CR1 |= TIM_CR1_URS | TIM_CR1_DIR; //overflow/underflow interrupt, count down
 	TIM4->DIER |= TIM_DIER_UIE; // update interrupt ENABLED
-	//TIM4->CR1 |= TIM_CR1_CEN; //enable the counter
+	TIM4->CR1 |= TIM_CR1_CEN; //enable the counter
 
 	//-----------------------USB clock configuration----------------------------------
 	// stm32h7xx_hal_rcc.h line 7534 and 277
@@ -165,6 +166,7 @@ void board_init(void){
 void TIM4_IRQHandler(void){
 	TIM4->SR &= ~TIM_SR_UIF; //clear the update interrupt flag
 	GPIOE->ODR ^= GPIO_ODR_OD1; // toggle bit 14
+	tim4_expire_callback();
 	return;
 }
 
@@ -184,6 +186,7 @@ void DMA1_Stream0_IRQHandler(void){
 		// transmission err.
 		DMA1->LIFCR |= DMA_LIFCR_CTEIF0; // clear transmit complete flag
 		GPIOB->BSRR = GPIO_BSRR_BS14; //set bit
+		logger_printf("d10 irq transfer error.\n\r");
 	}else{
 		// transfer is successful (this implies TX is done)
 		DMA1->LIFCR |= DMA_LIFCR_CTCIF0; // clear transmit complete flag
@@ -195,6 +198,7 @@ void DMA1_Stream1_IRQHandler(void){
 		// transmission err.
 		DMA1->LIFCR |= DMA_LIFCR_CTEIF1; // clear transmit complete flag
 		GPIOB->BSRR = GPIO_BSRR_BS14; //set bit
+		logger_printf("d11 irq transfer error.\n\r");
 	}else if( DMA1->LISR & DMA_LISR_HTIF1 ){
 		//half complete interrupt
 		DMA1->LIFCR |= DMA_LIFCR_CHTIF1; // clear transmit complete flag
@@ -204,7 +208,6 @@ void DMA1_Stream1_IRQHandler(void){
 		DMA1->LIFCR |= DMA_LIFCR_CTCIF1; // clear transmit complete flag
 		serial_read_check();
 	}
-	logger_printf("d11 irq.\n\r");
 }
 
 void serial_write(uint8_t *buf, uint16_t len){

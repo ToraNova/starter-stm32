@@ -12,9 +12,27 @@
 #include "lwip/init.h"
 #include "lwip/timeouts.h"
 #include "httpd.h"
+#include "pppd.h"
 
 /* lwip context */
-static struct netif netif_data;
+static struct netif usbet_netif;
+static struct netif pppos_netif;
+static ppp_pcb *ppp;
+
+void serial_read_callback(const uint8_t *buf, uint16_t len){
+	logger_printf("sercb: received (%u).\n\r", len);
+	//logger_printf("sercb: received (%u) [", len);
+	//for(uint16_t i=0; i<len; i++){
+	//	logger_printf("%02x",buf[i]);
+	//}
+	//logger_printf("].\r\n");
+	pppos_input(ppp, buf, len);
+}
+
+void tim4_expire_callback(void){
+	// problem - won't reply to ping
+	//logger_printf("pppd phase %02X.\r\n", ppp->phase);
+}
 
 /* shared between tud_network_recv_cb() and service_traffic() */
 static struct pbuf *received_frame;
@@ -28,6 +46,9 @@ const uint8_t tud_network_mac_address[6] = {0x02,0x02,0x84,0x6A,0x96,0x00};
 static const ip_addr_t ipaddr  = IPADDR4_INIT_BYTES(192, 168, 7, 1);
 static const ip_addr_t netmask = IPADDR4_INIT_BYTES(255, 255, 255, 0);
 static const ip_addr_t gateway = IPADDR4_INIT_BYTES(0, 0, 0, 0);
+
+static const ip_addr_t pppos_our_ipaddr = IPADDR4_INIT_BYTES(10,0,0,2); //our ip
+static const ip_addr_t pppos_thr_ipaddr = IPADDR4_INIT_BYTES(10,0,0,1); //their ip
 
 /* database IP addresses that can be offered to the host; this must be in RAM to store assigned MAC addresses */
 static dhcp_entry_t entries[] =
@@ -89,7 +110,7 @@ static err_t netif_init_cb(struct netif *netif)
 
 static void init_lwip(void)
 {
-	struct netif *netif = &netif_data;
+	struct netif *netif = &usbet_netif;
 
 	lwip_init();
 
@@ -100,6 +121,20 @@ static void init_lwip(void)
 
 	netif = netif_add(netif, &ipaddr, &netmask, &gateway, NULL, netif_init_cb, ip_input);
 	netif_set_default(netif);
+
+	// init pppos
+	netif = &pppos_netif;
+	ppp = pppos_create(netif, ppp_output_cb, ppp_link_status_cb, NULL);
+	if (ppp == NULL ){
+		logger_printf("pppos creation failed.\r\n.");
+	}
+	ppp_set_ipcp_ouraddr(ppp, &pppos_our_ipaddr);
+	ppp_set_ipcp_hisaddr(ppp, &pppos_thr_ipaddr);
+	ppp_set_default(ppp);
+	err_t err = ppp_connect(ppp,0);
+	if (err != ERR_OK) {
+		logger_printf("pppd connect failed.\r\n.");
+	}
 }
 
 /* handle any DNS requests from dns-server */
@@ -161,7 +196,7 @@ static void service_traffic(void)
 	/* handle any packet received by tud_network_recv_cb() */
 	if (received_frame)
 	{
-		ethernet_input(received_frame, &netif_data);
+		ethernet_input(received_frame, &usbet_netif);
 		pbuf_free(received_frame);
 		received_frame = NULL;
 		tud_network_recv_renew();
@@ -192,20 +227,19 @@ int main(void){
 	}
 	// observation: when usb is plugged in, DMA fails
 	logger_printf("board init and logger ok.\r\n");
-	serial_write( (uint8_t *)"usart3 ok.\r\n", 12);
+	//serial_write((uint8_t *)"usart3 ok.\r\n", 12);
 
 	tusb_init();
 	logger_printf("tinyusb init ok.\r\n");
 
 	/* initialize lwip, dhcp-server, dns-server, and http */
 	init_lwip();
-	while (!netif_is_up(&netif_data));
+	while (!netif_is_up(&usbet_netif));
 	while (dhserv_init(&dhcp_config) != ERR_OK);
 	while (dnserv_init(&ipaddr, 53, dns_query_proc) != ERR_OK);
 	httpd_init();
 	logger_printf("httpd init ok.\r\n");
 
-	TIM4->CR1 |= TIM_CR1_CEN; //enable the counter
 	while (1)
 	{
 		tud_task();

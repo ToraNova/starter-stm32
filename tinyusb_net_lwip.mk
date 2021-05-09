@@ -54,6 +54,24 @@ SRC_C += \
 	libs/lwip/src/netif/ppp/ppp.c \
 	libs/lwip/src/netif/ppp/pppos.c \
 	libs/lwip/src/netif/ppp/magic.c \
+	libs/lwip/src/netif/ppp/lcp.c \
+	libs/lwip/src/netif/ppp/eap.c \
+	libs/lwip/src/netif/ppp/auth.c \
+	libs/lwip/src/netif/ppp/ipcp.c \
+	libs/lwip/src/netif/ppp/fsm.c \
+	libs/lwip/src/netif/ppp/ccp.c \
+	libs/lwip/src/netif/ppp/vj.c \
+	libs/lwip/src/netif/ppp/mppe.c \
+	libs/lwip/src/netif/ppp/utils.c \
+	libs/lwip/src/netif/ppp/chap-new.c \
+	libs/lwip/src/netif/ppp/chap-md5.c \
+	libs/lwip/src/netif/ppp/chap_ms.c \
+	libs/lwip/src/netif/ppp/polarssl/sha1.c \
+	libs/lwip/src/netif/ppp/polarssl/arc4.c \
+	libs/lwip/src/netif/ppp/polarssl/des.c \
+	libs/lwip/src/netif/ppp/polarssl/md4.c \
+	libs/lwip/src/netif/ppp/polarssl/md5.c \
+	libs/lwip/src/netif/ppp/pppcrypt.c \
 	libs/lwip/src/apps/http/httpd.c \
 	libs/lwip/src/apps/http/fs.c \
 	libs/networking/dhserver.c \

@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #define SERIAL_WRITE_MAX_LEN 1024
-#define SERIAL_RXBUF_LEN 32
+#define SERIAL_RXBUF_LEN 1024
 
 #ifdef __cplusplus
 extern "C" {
@@ -11,6 +11,8 @@ extern "C" {
 
 void logger_printf(const char *msg, ...) __attribute__ ((format (printf, 1, 2)));
 void logger_print32(uint32_t regval);
+
+extern void tim4_expire_callback(void);
 
 void serial_write(uint8_t *buf, uint16_t len);
 extern void serial_read_callback(const uint8_t *buf, uint16_t len);
