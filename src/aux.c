@@ -110,8 +110,8 @@ void board_init(void){
 
 	//------------------------TIMER INTERRUPT-----------------------------------------
 	// enable the timer4 clock to be gated by the rcc apb4lenr bus
-	TIM4->PSC = 7200; //prescaler 64000 (max 65535) on 64MHz clock means timer tick at 1Khz
-	TIM4->ARR = 23333; //timer interrupt trigger after 1000 ticks, so 1 second interrupt freq
+	TIM4->PSC = 64000; //prescaler 64000 (max 65535) on 64MHz clock means timer tick at 1Khz
+	TIM4->ARR = 2625*1; //timer interrupt trigger after 1000 ticks, so 1 second interrupt freq
 	TIM4->CR1 |= TIM_CR1_URS | TIM_CR1_DIR; //overflow/underflow interrupt, count down
 	TIM4->DIER |= TIM_DIER_UIE; // update interrupt ENABLED
 	TIM4->CR1 |= TIM_CR1_CEN; //enable the counter
@@ -160,7 +160,20 @@ void board_init(void){
 
 	DMA1_Stream1->CR |= DMA_SxCR_EN; // start dma rx
 	USART3->CR1 |= USART_CR1_UE; //enable usart3
-	GPIOB->BSRR = GPIO_BSRR_BR0; //set bit
+}
+
+void board_gpioctl(uint8_t num, uint8_t state){
+	uint32_t sval = 0;
+	switch(num){
+		case 0:
+			sval = state ? GPIO_BSRR_BS0 : GPIO_BSRR_BR0;
+			break;
+		case 1:
+			sval = state ? GPIO_BSRR_BS14 : GPIO_BSRR_BR14;
+			break;
+	}
+	GPIOB->BSRR |= sval;
+	return;
 }
 
 void TIM4_IRQHandler(void){

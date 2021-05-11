@@ -57,7 +57,7 @@ void ppp_link_status_cb(ppp_pcb *pcb, int err_code, void *ctx){
 }
 
 // Callback used by ppp connection
-uint32_t ppp_output_cb(ppp_pcb *pcb, const void *data, u32_t len, void *ctx){
+u32_t ppp_output_cb(ppp_pcb *pcb, const void *data, u32_t len, void *ctx){
 	LWIP_UNUSED_ARG(pcb);
 	LWIP_UNUSED_ARG(ctx);
 	if(len > SERIAL_WRITE_MAX_LEN){

@@ -20,7 +20,7 @@ static struct netif pppos_netif;
 static ppp_pcb *ppp;
 
 void serial_read_callback(const uint8_t *buf, uint16_t len){
-	logger_printf("sercb: received (%u).\n\r", len);
+	logger_printf("pppos_read_ci: received (%u).\n\r", len);
 	//logger_printf("sercb: received (%u) [", len);
 	//for(uint16_t i=0; i<len; i++){
 	//	logger_printf("%02x",buf[i]);
@@ -31,7 +31,7 @@ void serial_read_callback(const uint8_t *buf, uint16_t len){
 
 void tim4_expire_callback(void){
 	// problem - won't reply to ping
-	//logger_printf("pppd phase %02X.\r\n", ppp->phase);
+	logger_printf("pppd phase %02X.\r\n", ppp->phase);
 }
 
 /* shared between tud_network_recv_cb() and service_traffic() */
@@ -110,31 +110,35 @@ static err_t netif_init_cb(struct netif *netif)
 
 static void init_lwip(void)
 {
-	struct netif *netif = &usbet_netif;
-
-	lwip_init();
+	struct netif *netif;
+	err_t err;
 
 	/* the lwip virtual MAC address must be different from the host's; to ensure this, we toggle the LSbit */
+	netif = &usbet_netif;
 	netif->hwaddr_len = sizeof(tud_network_mac_address);
 	memcpy(netif->hwaddr, tud_network_mac_address, sizeof(tud_network_mac_address));
 	netif->hwaddr[5] ^= 0x01;
-
 	netif = netif_add(netif, &ipaddr, &netmask, &gateway, NULL, netif_init_cb, ip_input);
-	netif_set_default(netif);
+	//netif_set_default(netif);
 
+	lwip_init();
 	// init pppos
 	netif = &pppos_netif;
 	ppp = pppos_create(netif, ppp_output_cb, ppp_link_status_cb, NULL);
 	if (ppp == NULL ){
 		logger_printf("pppos creation failed.\r\n.");
 	}
+
 	ppp_set_ipcp_ouraddr(ppp, &pppos_our_ipaddr);
 	ppp_set_ipcp_hisaddr(ppp, &pppos_thr_ipaddr);
-	ppp_set_default(ppp);
-	err_t err = ppp_connect(ppp,0);
+	ppp_set_silent(ppp, 1);
+	ppp_set_default(ppp); //set ppp as default route
+
+	err = ppp_connect(ppp,0);
 	if (err != ERR_OK) {
 		logger_printf("pppd connect failed.\r\n.");
 	}
+
 }
 
 /* handle any DNS requests from dns-server */
@@ -220,14 +224,14 @@ int main(void){
 	board_init();
 	//blink 10 times quickly
 	for(int i=0;i<10;i++){
-		GPIOB->BSRR = GPIO_BSRR_BS14; //set bit
+		board_gpioctl(1, 1); //set bit
 		idle_delay(50);
-		GPIOB->BSRR = GPIO_BSRR_BR14; //reset bit
+		board_gpioctl(1, 0); //unset bit
 		idle_delay(50);
 	}
 	// observation: when usb is plugged in, DMA fails
 	logger_printf("board init and logger ok.\r\n");
-	//serial_write((uint8_t *)"usart3 ok.\r\n", 12);
+	serial_write((uint8_t *)"usart3 ok.\r\n", 12);
 
 	tusb_init();
 	logger_printf("tinyusb init ok.\r\n");
@@ -237,6 +241,8 @@ int main(void){
 	while (!netif_is_up(&usbet_netif));
 	while (dhserv_init(&dhcp_config) != ERR_OK);
 	while (dnserv_init(&ipaddr, 53, dns_query_proc) != ERR_OK);
+	logger_printf("dhserver init ok.\r\n");
+
 	httpd_init();
 	logger_printf("httpd init ok.\r\n");
 
@@ -244,6 +250,15 @@ int main(void){
 	{
 		tud_task();
 		service_traffic();
+		if(ppp->phase == PPP_PHASE_DEAD){
+			//attempt to reconnect
+			logger_printf("pppd attempt to reconnect.\r\n.");
+			err = ppp_connect(ppp,0);
+			if (err != ERR_OK) {
+				logger_printf("pppd reconnect failed.\r\n.");
+			}
+
+		}
 	}
 }
 

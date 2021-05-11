@@ -55,6 +55,7 @@
 #define LWIP_HTTPD_SSI_INCLUDE_TAG      0
 
 //#define LWIP_SINGLE_NETIF               1
+#define IP_FORWARD                      1
 
 #define PPP_SUPPORT 			1
 #define PPPOS_SUPPORT 			1

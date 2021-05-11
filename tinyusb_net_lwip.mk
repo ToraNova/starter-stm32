@@ -49,7 +49,9 @@ SRC_C += \
 	libs/lwip/src/core/ipv4/ip4.c \
 	libs/lwip/src/core/ipv4/ip4_addr.c \
 	libs/lwip/src/core/ipv4/ip4_frag.c \
+	libs/lwip/src/core/ipv4/acd.c \
 	libs/lwip/src/netif/ethernet.c \
+	libs/lwip/src/netif/bridgeif.c \
 	libs/lwip/src/netif/slipif.c \
 	libs/lwip/src/netif/ppp/ppp.c \
 	libs/lwip/src/netif/ppp/pppos.c \
