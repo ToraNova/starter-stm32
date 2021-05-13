@@ -1,9 +1,9 @@
 BOARD = nucleoh743zl2
 ST_FAMILY = h7
 UF2_FAMILY_ID = 0x6db66082
-DEPS_SUBMODULES += st/cmsis_device_$(ST_FAMILY)
+DEPS_SUBMODULES += lib/cmsis_device_$(ST_FAMILY)
 
-ST_CMSIS = st/cmsis_device_$(ST_FAMILY)
+ST_CMSIS = lib/cmsis_device_$(ST_FAMILY)
 
 # Default is FulSpeed port
 PORT ?= 0
@@ -37,7 +37,4 @@ SRC_C += \
 
 INC += \
        $(ST_CMSIS)/Include \
-	st/CMSIS_5/CMSIS/Core/Include \
-
-# For freeRTOS port source
-FREERTOS_PORT = ARM_CM7/r0p1
+	lib/CMSIS_5/CMSIS/Core/Include \

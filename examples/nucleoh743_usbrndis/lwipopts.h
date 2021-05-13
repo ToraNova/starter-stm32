@@ -56,7 +56,8 @@
 
 #define LWIP_SINGLE_NETIF               1
 
-//#define PPP_SUPPORT 			1
-//#define PPPOS_SUPPORT 		1
+#define LWIP_DEBUG                      1
+#define ICMP_DEBUG 			LWIP_DBG_ON
+#define LWIP_DBG_MIN_LEVEL              LWIP_DBG_LEVEL_ALL
 
 #endif /* __LWIPOPTS_H__ */

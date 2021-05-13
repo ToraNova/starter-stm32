@@ -1,6 +1,11 @@
+#include "stm32h7xx.h"
 #include "stm32h743xx.h"
-#include "aux.h"
-#include "halper.h"
+
+#define __HAL_RCC_PLL_CONFIG(__RCC_PLLSOURCE__, __PLLM1__, __PLLN1__, __PLLP1__, __PLLQ1__,__PLLR1__ ) \
+                  do{ MODIFY_REG(RCC->PLLCKSELR, (RCC_PLLCKSELR_PLLSRC | RCC_PLLCKSELR_DIVM1) , ((__RCC_PLLSOURCE__) | ( (__PLLM1__) <<4U)));  \
+                      WRITE_REG (RCC->PLL1DIVR , ( (((__PLLN1__) - 1U )& RCC_PLL1DIVR_N1) | ((((__PLLP1__) -1U ) << 9U) & RCC_PLL1DIVR_P1) | \
+                                ((((__PLLQ1__) -1U) << 16U)& RCC_PLL1DIVR_Q1) | ((((__PLLR1__) - 1U) << 24U)& RCC_PLL1DIVR_R1))); \
+                    } while(0)
 
 uint32_t sysclk_pll_hse_freq(void){
 	uint32_t pllp, pllm, pllfracen;
@@ -135,7 +140,7 @@ void __sysclk_pll_hse_init(
 //halstatus = HAL_InitTick (uwTickPrio);
 }
 
-void sysclk_pll_hse_init(void){
+void sysclk_init(void){
 	// RCC initialization according to tinyusb stm32h7nucleo board example
 	// using high speed external oscillator (8MHz)
 	RCC->CR |= RCC_CR_HSEON;
