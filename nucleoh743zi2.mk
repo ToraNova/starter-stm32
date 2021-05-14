@@ -34,7 +34,9 @@ CFLAGS += -Wno-error=maybe-uninitialized -Wno-error=cast-align
 # All source paths should be relative to the top level.
 SRC_C += \
 	$(ST_CMSIS)/Source/Templates/system_stm32$(ST_FAMILY)xx.c \
+	lib/lwrb/lwrb.c \
 
 INC += \
        $(ST_CMSIS)/Include \
 	lib/CMSIS_5/CMSIS/Core/Include \
+	lib/lwrb \

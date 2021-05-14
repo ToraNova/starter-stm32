@@ -18,6 +18,7 @@ SRC_C += \
 	lib/tinyusb/src/class/net/net_device.c \
 	lib/tinyusb/src/class/usbtmc/usbtmc_device.c \
 	lib/tinyusb/src/class/vendor/vendor_device.c \
+	lib/networking/rndis_reports.c \
 
 INC += \
 	lib/tinyusb/src \

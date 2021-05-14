@@ -35,3 +35,7 @@ __attribute__((weak)) void sysclk_init(void){
 uint32_t sys_now(void) {
 	return sysclk_millis();
 }
+uint32_t sys_jiffies(void)
+{
+	return sysclk_millis();
+}

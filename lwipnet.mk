@@ -63,7 +63,6 @@ SRC_C += \
 	lib/lwip/src/apps/http/fs.c \
 	lib/networking/dhserver.c \
 	lib/networking/dnserver.c \
-	lib/networking/rndis_reports.c
 
 INC += \
 	lib/lwip/src/include \

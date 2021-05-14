@@ -48,7 +48,6 @@ CFLAGS += \
   -Wstrict-prototypes \
   -Wall \
   -Wextra \
-  -Werror \
   -Wfatal-errors \
   -Werror-implicit-function-declaration \
   -Wfloat-equal \
@@ -58,7 +57,8 @@ CFLAGS += \
   -Wsign-compare \
   -Wmissing-format-attribute \
   -Wunreachable-code \
-  -Wcast-align
+  -Wcast-align \
+  -Werror \
 
 # Debugging/Optimization
 ifeq ($(OPTI), 1)
