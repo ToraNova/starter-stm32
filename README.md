@@ -22,6 +22,7 @@ some examples to help better understand how to use the stm32 or for jump startin
  - [blinky](examples/nucleoh743_blinky)
  - [uart using dma](examples/nucleoh743_uartdma)
  - [usb-rndis using tinyusb and lwip](examples/nucleoh743_usbrndis)
+ - [ppp over serial](examples/nucleoh743_pppos)
 
 ##  references
 this project will never be fruit if not for the following open source project for me to bang my head on to study their sources.

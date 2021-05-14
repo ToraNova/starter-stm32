@@ -12,8 +12,8 @@ PROJECT := template_project
 #SRC_PROJECT := src
 #SRC_PROJECT := examples/nucleoh743_blinky
 #SRC_PROJECT := examples/nucleoh743_uartdma
-SRC_PROJECT := examples/nucleoh743_usbrndis
-#SRC_PROJECT := examples/nucleoh743_pppos
+#SRC_PROJECT := examples/nucleoh743_usbrndis
+SRC_PROJECT := examples/nucleoh743_pppos
 
 # TODO: change the following to select for diff boards
 include nucleoh743zi2.mk
@@ -35,7 +35,7 @@ SRC_C += \
 # TODO: comment the following (or uncomment)
 # if use of the libs are required
 # tinyusb stack
-include tinyusb.mk
+#include tinyusb.mk
 # lwip and networking libs
 include lwipnet.mk
 
