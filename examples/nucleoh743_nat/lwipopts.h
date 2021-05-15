@@ -32,6 +32,8 @@
 #ifndef __LWIPOPTS_H__
 #define __LWIPOPTS_H__
 
+#define MEM_LIBC_MALLOC 		1
+
 /* Prevent having to link sys_arch.c (we don't test the API layers in unit tests) */
 #define NO_SYS                          1
 #define MEM_ALIGNMENT                   4
@@ -54,10 +56,25 @@
 #define LWIP_HTTPD_SSI                  0
 #define LWIP_HTTPD_SSI_INCLUDE_TAG      0
 
-#define LWIP_SINGLE_NETIF               1
+//#define LWIP_SINGLE_NETIF             1
+#define IP_FORWARD                      1
+
+#define PPP_SUPPORT 			1
+#define PPPOS_SUPPORT 			1
+//#define PPP_INPROC_IRQ_SAFE 		1
+#define VJ_SUPPORT 			1
+#define CCP_SUPPORT 			1
+#define MPPE_SUPPORT 			1
+#define LCP_ECHOINTERVAL 		10
+#define LCP_MAXECHOFAILS 		3
 
 #define LWIP_DEBUG                      1
-#define ICMP_DEBUG 			LWIP_DBG_ON
+//#define PPP_DEBUG 			LWIP_DBG_ON
+#define IP_DEBUG 			LWIP_DBG_ON
+//#define TCP_DEBUG 			LWIP_DBG_ON
+//#define NETIF_DEBUG 			LWIP_DBG_ON
+//#define ICMP_DEBUG 			LWIP_DBG_ON
+
 #define LWIP_DBG_MIN_LEVEL              LWIP_DBG_LEVEL_ALL
 //#define LWIP_DBG_MIN_LEVEL              LWIP_DBG_LEVEL_WARNING
 

@@ -1,5 +1,5 @@
 /*
- * example blinky program with usart.
+ * a pppos example using tx/rx uart dma
  * please refer to the reference manual to understand what is going on
  * https://www.st.com/resource/en/reference_manual/dm00314099-stm32h742-stm32h743753-and-stm32h750-value-line-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
  *

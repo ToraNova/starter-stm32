@@ -26,39 +26,53 @@
  *
  * This file is part of the lwIP TCP/IP stack.
  *
- * Author: Simon Goldschmidt
+ * Author: Adam Dunkels <adam@sics.se>
  *
  */
-#ifndef __LWIPOPTS_H__
-#define __LWIPOPTS_H__
+#ifndef __CC_H__
+#define __CC_H__
 
-/* Prevent having to link sys_arch.c (we don't test the API layers in unit tests) */
-#define NO_SYS                          1
-#define MEM_ALIGNMENT                   4
-#define LWIP_RAW                        0
-#define LWIP_NETCONN                    0
-#define LWIP_SOCKET                     0
-#define LWIP_DHCP                       0
-#define LWIP_ICMP                       1
-#define LWIP_UDP                        1
-#define LWIP_TCP                        1
-#define ETH_PAD_SIZE                    0
-#define LWIP_IP_ACCEPT_UDP_PORT(p)      ((p) == PP_NTOHS(67))
+//#include "cpu.h"
 
-#define TCP_MSS                         (1500 /*mtu*/ - 20 /*iphdr*/ - 20 /*tcphhr*/)
-#define TCP_SND_BUF                     (2 * TCP_MSS)
+typedef int sys_prot_t;
 
-#define ETHARP_SUPPORT_STATIC_ENTRIES   1
 
-#define LWIP_HTTPD_CGI                  0
-#define LWIP_HTTPD_SSI                  0
-#define LWIP_HTTPD_SSI_INCLUDE_TAG      0
 
-#define LWIP_SINGLE_NETIF               1
+/* define compiler specific symbols */
+#if defined (__ICCARM__)
 
-#define LWIP_DEBUG                      1
-#define ICMP_DEBUG 			LWIP_DBG_ON
-#define LWIP_DBG_MIN_LEVEL              LWIP_DBG_LEVEL_ALL
-//#define LWIP_DBG_MIN_LEVEL              LWIP_DBG_LEVEL_WARNING
+#define PACK_STRUCT_BEGIN
+#define PACK_STRUCT_STRUCT
+#define PACK_STRUCT_END
+#define PACK_STRUCT_FIELD(x) x
+#define PACK_STRUCT_USE_INCLUDES
 
-#endif /* __LWIPOPTS_H__ */
+#elif defined (__CC_ARM)
+
+#define PACK_STRUCT_BEGIN __packed
+#define PACK_STRUCT_STRUCT
+#define PACK_STRUCT_END
+#define PACK_STRUCT_FIELD(x) x
+
+#elif defined (__GNUC__)
+
+#define PACK_STRUCT_BEGIN
+#define PACK_STRUCT_STRUCT __attribute__ ((__packed__))
+#define PACK_STRUCT_END
+#define PACK_STRUCT_FIELD(x) x
+
+#elif defined (__TASKING__)
+
+#define PACK_STRUCT_BEGIN
+#define PACK_STRUCT_STRUCT
+#define PACK_STRUCT_END
+#define PACK_STRUCT_FIELD(x) x
+
+#endif
+
+#include "hw.h" //debugging example (template-stm32 project)
+#define LWIP_PLATFORM_DIAG(x)    do { logger_printf x; } while(0)
+
+#define LWIP_PLATFORM_ASSERT(x) do { if(!(x)) while(1); } while(0)
+
+#endif /* __CC_H__ */

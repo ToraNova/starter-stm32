@@ -177,14 +177,17 @@ void uart_putc(USART_TypeDef *handle, uint8_t c){
 }
 
 void serial_write(uint8_t *buf, uint16_t len){
+	if( len > DMA10_BUFSZ ){
+		logger_printf("serial_write: length overflow.\n");
+		len = DMA10_BUFSZ;
+	}
 	memcpy(dma10_buf, buf, len);
-	while (DMA1_Stream0->CR & DMA_SxCR_EN); //ensure EN bit is cleared
+	while ( (DMA1_Stream0->CR & DMA_SxCR_EN )); //ensure EN bit is cleared
 	__disable_irq();
 	SER_USART->ICR |= USART_ICR_TCCF; //clear the transmission complete flag
 	//DMA1->LIFCR |= (DMA_LIFCR_CTCIF0 | DMA_LIFCR_CHTIF0 | DMA_LIFCR_CTEIF0 | DMA_LIFCR_CDMEIF0 | DMA_LIFCR_CFEIF0); //clear all DMA flags (not needed, since the flags SHOULD be cleared in the interrupt anyways)
-	DMA1_Stream0->NDTR = len > DMA10_BUFSZ ? DMA10_BUFSZ : len; //set transfer length
+	DMA1_Stream0->NDTR = len;
 	DMA1_Stream0->CR |= DMA_SxCR_EN; // start the transfer
-	//logger_printf("us3_output: (%u).\n", len);
 	__enable_irq();
 }
 

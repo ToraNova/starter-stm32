@@ -26,8 +26,8 @@ extern void sysclk_init(void);
 #define SER_USART USART3
 #define LOGGER_BUFSZ 80
 
-#define DMA10_BUFSZ 32
-#define DMA11_BUFSZ 32
+#define DMA10_BUFSZ 1600
+#define DMA11_BUFSZ 1600
 
 // create a buffer in sram2, buffer is uninitialized and filled with random values
 // add the following onto the linker script to allow buf to be initialized on SRAM2
@@ -158,7 +158,7 @@ void hardware_init(void){
 	USART3->CR3 |= USART_CR3_DMAT | USART_CR3_DMAR; //enable DMA xmit and recv
 	//enable transmit, receive, idle detection interrupt and FIFO
 	USART3->CR1 |= USART_CR1_RE | USART_CR1_TE | USART_CR1_IDLEIE | USART_CR1_FIFOEN;
-	USART3->BRR = (uint32_t) (84000000/9600); //baud rate of 9600 for 84MHz clock
+	USART3->BRR = (uint32_t) (84000000/1152000); //baud rate of 9600 for 84MHz clock
 
 	// configure TX and RX FIFO for usart3 (7/8 depth)
   	MODIFY_REG(USART3->CR3, USART_CR3_RXFTCFG, 0x00000004U << USART_CR3_RXFTCFG_Pos);
@@ -175,7 +175,7 @@ void hardware_init(void){
 	RCC->APB1LENR |= RCC_APB1LENR_TIM4EN;
 	TIM4->PSC = 64000; //prescaler 64000 (max 65535) on 168MHz
 	// 168000000 / 64000 = 2625 (1Hz)
-	TIM4->ARR = 2625*1; //timer interrupt trigger after 2625 ticks, so 1 second interrupt freq
+	TIM4->ARR = (uint32_t)2625*(0.1); //timer interrupt trigger after 2625 ticks, so 0.1 second int
 	TIM4->CR1 |= TIM_CR1_URS | TIM_CR1_DIR; //overflow/underflow interrupt, count down
 	TIM4->DIER |= TIM_DIER_UIE; // update interrupt ENABLED
 	TIM4->CR1 |= TIM_CR1_CEN; //enable the counter
