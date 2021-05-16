@@ -13,21 +13,22 @@
 #include "lwrb.h"
 #include "netif/ppp/ppp.h"
 #include "netif/ppp/pppos.h"
+#include "nat/nat.h"
 #include "httpd.h"
 
 /* lwip context */
-static struct netif netif_data;
+static struct netif usbet_netif;
+static struct netif pppos_netif;
+static ppp_pcb *ppp;
+static struct nat_rule usb2ppp_rule; //nat
 
 /* shared between tud_network_recv_cb() and service_traffic() */
 static struct pbuf *received_frame;
-
+// buffers
 static uint8_t gstate;
-static struct netif pppos_netif;
-static ppp_pcb *ppp;
-static lwrb_t ringbuf;
 static uint8_t ringbuf_data[2048];
-
-	uint8_t pack[PPP_MAXMRU]; //packet buffer
+static uint8_t pack[PPP_MAXMRU]; //packet buffer
+static lwrb_t ringbuf;
 
 /* this is used by this code, ./class/net/net_driver.c, and usb_descriptors.c */
 /* ideally speaking, this should be generated from the hardware's unique ID (if available) */
@@ -71,7 +72,14 @@ uint32_t ppp_output_callback(ppp_pcb *pcb, const void *data, uint32_t len, void 
 	LWIP_UNUSED_ARG(pcb);
 	LWIP_UNUSED_ARG(ctx);
 	//idle_delay(20); // if using 9600, this 20ms delay seems necessary!
-	idle_delay(5); // required to serve the http packet correctly on 1152000
+	//idle_delay(50); // required to serve the http packet correctly on 1152000
+	// TODO: ping checksum is missing (use wireshark to observe)
+	// https://github.com/russdill/lwip-nat/issues/5
+	logger_printf("OUT: ");
+	for(uint32_t i=0;i<len;i++){
+		logger_printf("%02X ", ((uint8_t *)data)[i]);
+	}
+	logger_printf("\n");
   	serial_write((uint8_t *)data, len);
 	return len;
 }
@@ -167,7 +175,7 @@ static err_t netif_init_cb(struct netif *netif) {
 }
 
 static void network_init(void) {
-	struct netif *netif = &netif_data;
+	struct netif *netif = &usbet_netif;
 	err_t err;
 
 	lwip_init();
@@ -195,6 +203,15 @@ static void network_init(void) {
 	err = ppp_connect(ppp,0);
 	if (err != ERR_OK) {
 		logger_printf("pppd connect failed.\n.");
+	}
+
+	// NAT setup
+	struct nat_rule *rule = &usb2ppp_rule;
+	rule->inp = &usbet_netif;
+	rule->outp = &pppos_netif;
+	err = nat_rule_add(rule);
+	if (err != ERR_OK){
+		logger_printf("nat setup failed.\n");
 	}
 }
 
@@ -251,8 +268,8 @@ static void service_traffic(void) {
 
 	/* handle any packet received by tud_network_recv_cb() */
 	if (received_frame) {
-		ethernet_input(received_frame, &netif_data);
-		pbuf_free(received_frame);
+		ethernet_input(received_frame, &usbet_netif);
+		//pbuf_free(received_frame);
 		received_frame = NULL;
 		tud_network_recv_renew();
 	}
@@ -262,7 +279,7 @@ static void service_traffic(void) {
 		pppos_input(ppp, pack, rblen);
 	}
 
-	sys_check_timeouts();
+	//sys_check_timeouts();
 }
 
 void tud_network_init_cb(void)
@@ -285,7 +302,7 @@ int main(void) {
 
 	/* initialize lwip, dhcp-server, dns-server, and http */
 	network_init();
-	while (!netif_is_up(&netif_data));
+	while (!netif_is_up(&usbet_netif));
 	while (dhserv_init(&dhcp_config) != ERR_OK);
 	while (dnserv_init(&ipaddr, 53, dns_query_proc) != ERR_OK);
 	httpd_init();

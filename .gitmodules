@@ -10,3 +10,6 @@
 [submodule "lib/lwip"]
 	path = lib/lwip
 	url = https://github.com/lwip-tcpip/lwip.git
+[submodule "lib/nat"]
+	path = lib/nat
+	url = https://github.com/russdill/lwip-nat.git

@@ -58,7 +58,7 @@ CFLAGS += \
   -Wmissing-format-attribute \
   -Wunreachable-code \
   -Wcast-align \
-  -Werror \
+  #-Werror \
 
 # Debugging/Optimization
 ifeq ($(OPTI), 1)

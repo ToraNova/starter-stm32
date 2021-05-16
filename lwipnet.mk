@@ -64,8 +64,19 @@ SRC_C += \
 	lib/networking/dhserver.c \
 	lib/networking/dnserver.c \
 
+# use lwip-nat ip4 implementation (NAT support)
+SRC_C += \
+	 lib/nat/ip4_input_nat.c \
+	 lib/nat/ip4_prerouting_hook.c \
+	 lib/nat/nat.c \
+	 lib/nat/nat_proto_icmp4.c \
+	 lib/nat/nat_proto_ip4.c \
+	 lib/nat/nat_proto_tcp.c \
+	 lib/nat/nat_proto_udp.c \
+
 INC += \
 	lib/lwip/src/include \
 	lib/lwip/src/include/ipv4 \
 	lib/lwip/src/include/lwip/apps \
-	lib/networking
+	lib/nat/include \
+	lib/networking \
