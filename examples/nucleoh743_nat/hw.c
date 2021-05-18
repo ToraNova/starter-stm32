@@ -24,7 +24,7 @@ extern void sysclk_init(void);
 
 #define LOG_USART USART2
 #define SER_USART USART3
-#define LOGGER_BUFSZ 80
+#define LOGGER_BUFSZ 128
 
 #define DMA10_BUFSZ 1600
 #define DMA11_BUFSZ 1600

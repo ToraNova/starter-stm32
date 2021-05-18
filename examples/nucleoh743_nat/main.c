@@ -75,11 +75,11 @@ uint32_t ppp_output_callback(ppp_pcb *pcb, const void *data, uint32_t len, void 
 	//idle_delay(50); // required to serve the http packet correctly on 1152000
 	// TODO: ping checksum is missing (use wireshark to observe)
 	// https://github.com/russdill/lwip-nat/issues/5
-	logger_printf("OUT: ");
-	for(uint32_t i=0;i<len;i++){
-		logger_printf("%02X ", ((uint8_t *)data)[i]);
-	}
-	logger_printf("\n");
+	//logger_printf("OUT: ");
+	//for(uint32_t i=0;i<len;i++){
+	//	logger_printf("%02X ", ((uint8_t *)data)[i]);
+	//}
+	//logger_printf("\n");
   	serial_write((uint8_t *)data, len);
 	return len;
 }
@@ -303,8 +303,9 @@ int main(void) {
 	/* initialize lwip, dhcp-server, dns-server, and http */
 	network_init();
 	while (!netif_is_up(&usbet_netif));
-	while (dhserv_init(&dhcp_config) != ERR_OK);
-	while (dnserv_init(&ipaddr, 53, dns_query_proc) != ERR_OK);
+	while (!netif_is_up(&pppos_netif));
+	//while (dhserv_init(&dhcp_config) != ERR_OK);
+	//while (dnserv_init(&ipaddr, 53, dns_query_proc) != ERR_OK);
 	httpd_init();
 
 	logger_printf("setup ok. elapsed millis: %lu\n", sysclk_millis());

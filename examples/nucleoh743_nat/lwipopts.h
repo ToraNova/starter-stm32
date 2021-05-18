@@ -92,7 +92,7 @@ extern int ip4_input_nat(struct pbuf *p, struct netif *inp);
 
 #define LWIP_DEBUG                      1
 #define PPP_DEBUG 			LWIP_DBG_ON //required to keep ppp running (FIX ME!)
-//#define IP_DEBUG 			LWIP_DBG_ON
+#define IP_DEBUG 			LWIP_DBG_ON
 #define NAT_DEBUG			LWIP_DBG_ON
 //#define TCP_DEBUG 			LWIP_DBG_ON
 //#define NETIF_DEBUG 			LWIP_DBG_ON
@@ -100,5 +100,20 @@ extern int ip4_input_nat(struct pbuf *p, struct netif *inp);
 
 #define LWIP_DBG_MIN_LEVEL              LWIP_DBG_LEVEL_ALL
 //#define LWIP_DBG_MIN_LEVEL              LWIP_DBG_LEVEL_WARNING
+
+// prevent checksum from being set to 0 (see src/core/ipv4/ip4.c line 339)
+#define LWIP_CHECKSUM_CTRL_PER_NETIF    0
+#define CHECKSUM_GEN_IP 		0
+#define CHECKSUM_GEN_UDP                0
+#define CHECKSUM_GEN_TCP                0
+#define CHECKSUM_GEN_ICMP               0
+
+/* useful lwip debugging tool, p is a pbuf *
+logger_printf("tag: ");
+for(u16_t i=0;i < p->len; i++){
+  logger_printf("%02x", ((char *)p->payload)[i]);
+}
+logger_printf("\n");
+*/
 
 #endif /* __LWIPOPTS_H__ */
