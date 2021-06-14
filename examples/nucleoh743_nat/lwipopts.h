@@ -92,8 +92,8 @@ extern int ip4_input_nat(struct pbuf *p, struct netif *inp);
 
 #define LWIP_DEBUG                      1
 #define PPP_DEBUG 			LWIP_DBG_ON //required to keep ppp running (FIX ME!)
-#define IP_DEBUG 			LWIP_DBG_ON
-#define NAT_DEBUG			LWIP_DBG_ON
+//#define IP_DEBUG 			LWIP_DBG_ON
+//#define NAT_DEBUG			LWIP_DBG_ON
 //#define TCP_DEBUG 			LWIP_DBG_ON
 //#define NETIF_DEBUG 			LWIP_DBG_ON
 //#define ICMP_DEBUG 			LWIP_DBG_ON
