@@ -108,6 +108,10 @@ extern int ip4_input_nat(struct pbuf *p, struct netif *inp);
 #define CHECKSUM_GEN_TCP                0
 #define CHECKSUM_GEN_ICMP               0
 
+// http://lwip.100.n7.nabble.com/TCP-spurious-Retransmission-and-Dup-Ack-issue-td28322.html
+// https://stackoverflow.com/questions/32886331/tcp-retransmission-even-if-packet-ack-has-been-received
+//#define LWIP_NETIF_TX_SINGLE_PBUF    	1
+
 /* useful lwip debugging tool, p is a pbuf *
 logger_printf("tag: ");
 for(u16_t i=0;i < p->len; i++){

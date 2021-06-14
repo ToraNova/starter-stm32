@@ -26,7 +26,7 @@ static struct nat_rule usb2ppp_rule; //nat
 static struct pbuf *received_frame;
 // buffers
 static uint8_t gstate;
-static uint8_t ringbuf_data[2048];
+static uint8_t ringbuf_data[32768];
 static uint8_t pack[PPP_MAXMRU]; //packet buffer
 static lwrb_t ringbuf;
 
