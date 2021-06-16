@@ -65,13 +65,11 @@ static const dhcp_config_t dhcp_config = {
 // called when serial has input
 void serial_read_callback(const uint8_t *buf, uint16_t len){
 	/* Write data to receive buffer */
-#if PPP_DEBUG != LWIP_DBG_ON
-	logger_printf("pppos_in: ");
-	for(uint32_t i=0;i<len;i++){
-		logger_printf("%02X", buf[i]);
-	}
-	logger_printf("\n");
-#endif
+	//logger_printf("pppos_in: ");
+	//for(uint32_t i=0;i<len;i++){
+	//	logger_printf("%02X", buf[i]);
+	//}
+	//logger_printf("\n");
 	lwrb_write(&ringbuf, buf, len);
 }
 
@@ -82,15 +80,11 @@ uint32_t ppp_output_callback(ppp_pcb *pcb, const void *data, uint32_t len, void 
 	irq_disable();
 	//idle_delay(20); // if using 9600, this 20ms delay seems necessary!
 	//idle_delay(50); // required to serve the http packet correctly on 1152000
-	// TODO: ping checksum is missing (use wireshark to observe)
-	// https://github.com/russdill/lwip-nat/issues/5
-#if PPP_DEBUG != LWIP_DBG_ON
-	logger_printf("pppos_out: ");
-	for(uint32_t i=0;i<len;i++){
-		logger_printf("%02X", ((uint8_t *)data)[i]);
-	}
-	logger_printf("\n");
-#endif
+	//logger_printf("pppos_out: ");
+	//for(uint32_t i=0;i<len;i++){
+	//	logger_printf("%02X", ((uint8_t *)data)[i]);
+	//}
+	//logger_printf("\n");
   	serial_write((uint8_t *)data, len);
 	irq_enable();
 	return len;
@@ -334,7 +328,7 @@ int main(void) {
 	httpd_init();
 
 	logger_printf("setup ok. elapsed millis: %lu\n", sysclk_millis());
-	logger_printf("pbuf_link_hlen: %lu\n", PBUF_LINK_HLEN);
+	//logger_printf("pbuf_link_hlen: %lu\n", PBUF_LINK_HLEN);
 
 	while (1) {
 		sys_check_timeouts();
