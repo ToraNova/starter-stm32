@@ -1,0 +1,17 @@
+diff --git a/src/netif/ppp/pppos.c b/src/netif/ppp/pppos.c
+index f8ae8366..fe491111 100644
+--- a/src/netif/ppp/pppos.c
++++ b/src/netif/ppp/pppos.c
+@@ -700,7 +700,12 @@ pppos_input(ppp_pcb *ppp, const void *s, int l)
+               pbuf_alloc_len = PBUF_LINK_ENCAPSULATION_HLEN + PBUF_LINK_HLEN;
+             }
+ #endif /* IP_FORWARD || LWIP_IPV6_FORWARD */
++
++#if IP_FORWARD || LWIP_IPV6_FORWARD
++            next_pbuf = pbuf_alloc(PBUF_LINK, pbuf_alloc_len, PBUF_POOL);
++#else
+             next_pbuf = pbuf_alloc(PBUF_RAW, pbuf_alloc_len, PBUF_POOL);
++#endif
+             if (next_pbuf == NULL) {
+               /* No free buffers.  Drop the input packet and let the
+                * higher layers deal with it.  Continue processing

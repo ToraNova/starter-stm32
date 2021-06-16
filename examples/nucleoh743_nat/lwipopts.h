@@ -32,23 +32,14 @@
 #ifndef __LWIPOPTS_H__
 #define __LWIPOPTS_H__
 
-#define NO_SYS_NO_TIMERS		0
-#define SYS_LIGHTWEIGHT_PROT		0
+#define NO_SYS_NO_TIMERS 		0
+//#define SYS_LIGHTWEIGHT_PROT		0
 #define NO_SYS                          1
 
 #define MEM_LIBC_MALLOC			1
 #define MEMP_MEM_MALLOC			1
 #define MEM_ALIGNMENT			4
-
 #define MEM_SIZE                        (16*1024*1024)
-#define MEMP_NUM_UDP_PCB		1024
-#define MEMP_NUM_TCP_PCB		1024
-#define MEMP_NUM_TCP_PCB_LISTEN		1024
-#define MEMP_NUM_TCP_SEG		8192
-#define MEMP_NUM_REASSDATA		256
-#define MEMP_NUM_FRAG_PBUF		1024
-#define MEMP_NUM_TCPIP_MSG_API		1024
-#define MEMP_NUM_TCPIP_MSG_INPKT	1024
 
 #define LWIP_RAW                        0
 #define LWIP_NETCONN                    0
@@ -63,11 +54,17 @@
 #define TCP_MSS                         (1500 /*mtu*/ - 20 /*iphdr*/ - 20 /*tcphhr*/)
 #define TCP_SND_BUF                     (2 * TCP_MSS)
 
-#define ETHARP_SUPPORT_STATIC_ENTRIES   1
+// https://github.com/russdill/tunsocks/blob/master/include/lwipopts.h
+//#define LWIP_TCP_KEEPALIVE		1
+//#define LWIP_TCP_TIMESTAMPS		1
+//#define LWIP_WND_SCALE			8
+//#define TCP_MSS				1500
+//#define TCP_WND                         (256*1024)
+//#define TCP_SND_QUEUELEN                8192
+//#define TCP_SND_BUF                     65535
+//#define TCP_RCV_SCALE			8
 
-#define LWIP_HTTPD_CGI                  0
-#define LWIP_HTTPD_SSI                  0
-#define LWIP_HTTPD_SSI_INCLUDE_TAG      0
+#define ETHARP_SUPPORT_STATIC_ENTRIES   1
 
 //#define LWIP_SINGLE_NETIF             1
 #define IP_FORWARD                      1
@@ -77,9 +74,10 @@ struct pbuf;
 struct netif;
 extern int ip4_input_nat(struct pbuf *p, struct netif *inp);
 #define LWIP_HOOK_IP4_INPUT		ip4_input_nat
-#define LWIP_NAT 			1
-#define LWIP_NAT_ICMP 			1
+#define LWIP_NAT			1
+#define LWIP_NAT_ICMP			1
 #define LWIP_NAT_ICMP_IP		1
+#define LWIP_NAT_USE_OLDEST		1
 
 #define PPP_SUPPORT 			1
 #define PPPOS_SUPPORT 			1
@@ -91,9 +89,12 @@ extern int ip4_input_nat(struct pbuf *p, struct netif *inp);
 #define LCP_MAXECHOFAILS 		3
 
 #define LWIP_DEBUG                      1
+//#define ETHARP_DEBUG			LWIP_DBG_ON
+//#define PBUF_DEBUG			LWIP_DBG_ON
 #define PPP_DEBUG 			LWIP_DBG_ON //required to keep ppp running (FIX ME!)
+//#define PRINTPKT_SUPPORT 		1
 //#define IP_DEBUG 			LWIP_DBG_ON
-//#define NAT_DEBUG			LWIP_DBG_ON
+#define NAT_DEBUG			LWIP_DBG_ON
 //#define TCP_DEBUG 			LWIP_DBG_ON
 //#define NETIF_DEBUG 			LWIP_DBG_ON
 //#define ICMP_DEBUG 			LWIP_DBG_ON
@@ -107,6 +108,8 @@ extern int ip4_input_nat(struct pbuf *p, struct netif *inp);
 #define CHECKSUM_GEN_UDP                0
 #define CHECKSUM_GEN_TCP                0
 #define CHECKSUM_GEN_ICMP               0
+
+#define ETHARP_SUPPORT_VLAN 		0
 
 // http://lwip.100.n7.nabble.com/TCP-spurious-Retransmission-and-Dup-Ack-issue-td28322.html
 // https://stackoverflow.com/questions/32886331/tcp-retransmission-even-if-packet-ack-has-been-received

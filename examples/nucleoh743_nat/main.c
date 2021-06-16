@@ -26,9 +26,10 @@ static struct nat_rule usb2ppp_rule; //nat
 static struct pbuf *received_frame;
 // buffers
 static uint8_t gstate;
-static uint8_t ringbuf_data[32768];
+static uint8_t ringbuf_data[6000];
 static uint8_t pack[PPP_MAXMRU]; //packet buffer
 static lwrb_t ringbuf;
+static uint16_t gtc;
 
 /* this is used by this code, ./class/net/net_driver.c, and usb_descriptors.c */
 /* ideally speaking, this should be generated from the hardware's unique ID (if available) */
@@ -64,6 +65,13 @@ static const dhcp_config_t dhcp_config = {
 // called when serial has input
 void serial_read_callback(const uint8_t *buf, uint16_t len){
 	/* Write data to receive buffer */
+#if PPP_DEBUG != LWIP_DBG_ON
+	logger_printf("pppos_in: ");
+	for(uint32_t i=0;i<len;i++){
+		logger_printf("%02X", buf[i]);
+	}
+	logger_printf("\n");
+#endif
 	lwrb_write(&ringbuf, buf, len);
 }
 
@@ -71,23 +79,32 @@ void serial_read_callback(const uint8_t *buf, uint16_t len){
 uint32_t ppp_output_callback(ppp_pcb *pcb, const void *data, uint32_t len, void *ctx){
 	LWIP_UNUSED_ARG(pcb);
 	LWIP_UNUSED_ARG(ctx);
+	irq_disable();
 	//idle_delay(20); // if using 9600, this 20ms delay seems necessary!
 	//idle_delay(50); // required to serve the http packet correctly on 1152000
 	// TODO: ping checksum is missing (use wireshark to observe)
 	// https://github.com/russdill/lwip-nat/issues/5
-	//logger_printf("OUT: ");
-	//for(uint32_t i=0;i<len;i++){
-	//	logger_printf("%02X ", ((uint8_t *)data)[i]);
-	//}
-	//logger_printf("\n");
+#if PPP_DEBUG != LWIP_DBG_ON
+	logger_printf("pppos_out: ");
+	for(uint32_t i=0;i<len;i++){
+		logger_printf("%02X", ((uint8_t *)data)[i]);
+	}
+	logger_printf("\n");
+#endif
   	serial_write((uint8_t *)data, len);
+	irq_enable();
 	return len;
 }
 
 // called when timer expires
 void timer_expire_callback(void){
-	gpio_write(2, gstate);
-	gstate = !gstate; //toggle
+	gtc++;
+	if(gtc >= (uint16_t)(LWIP_NAT_TICK_PERIOD_MS / 100) ){
+		gpio_write(2, gstate);
+		gstate = !gstate; //toggle
+		nat_timer_tick(); //period of this should be 1ms LWIP_NAT_TICK_PERIOD_MS
+		gtc = 0;
+	}
 }
 
 void ppp_link_status_callback(ppp_pcb *pcb, int err_code, void *ctx){
@@ -274,12 +291,15 @@ static void service_traffic(void) {
 		tud_network_recv_renew();
 	}
 
+	// pppos_input called in main thread if PPP_INPROC_IRQ_SAFE == 1
+	// see https://www.nongnu.org/lwip/2_0_x/group__ppp.html
 	rblen = lwrb_read(&ringbuf, pack, PPP_MAXMRU);
 	if( rblen > 0){
+		if(rblen > PPP_MAXMRU){
+			logger_printf("ppp_input: length overflow.\n");
+		}
 		pppos_input(ppp, pack, rblen);
 	}
-
-	//sys_check_timeouts();
 }
 
 void tud_network_init_cb(void)
@@ -293,12 +313,17 @@ void tud_network_init_cb(void)
 
 int main(void) {
 	//initialize hardware peripherals
+	gtc = 0;
 	hardware_init();
 	lwrb_init(&ringbuf, ringbuf_data, sizeof(ringbuf_data));
 	gstate = 0;
 
 	/* initialize TinyUSB */
 	tusb_init();
+
+	//uint8_t data[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
+  	//serial_write(data, 8);
+	//while(1);
 
 	/* initialize lwip, dhcp-server, dns-server, and http */
 	network_init();
@@ -309,8 +334,10 @@ int main(void) {
 	httpd_init();
 
 	logger_printf("setup ok. elapsed millis: %lu\n", sysclk_millis());
+	logger_printf("pbuf_link_hlen: %lu\n", PBUF_LINK_HLEN);
 
 	while (1) {
+		sys_check_timeouts();
 		tud_task();
 		service_traffic();
 	}

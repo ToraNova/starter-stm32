@@ -136,7 +136,7 @@ void hardware_init(void){
 	//enable transmit, receive, idle detection interrupt and FIFO
 	//USART3->CR1 |= USART_CR1_RE | USART_CR1_TE | USART_CR1_IDLEIE | USART_CR1_FIFOEN;
 	USART3->CR1 |= USART_CR1_RE | USART_CR1_TE | USART_CR1_IDLEIE;
-	USART3->BRR = (uint32_t) (64000000/1152000); //baud rate of 1152000 for 64MHz clock
+	USART3->BRR = (uint32_t) (64000000/115200); //baud rate of 1152000 for 64MHz clock
 
 	// configure TX and RX FIFO for usart3 (7/8 depth)
   	MODIFY_REG(USART3->CR3, USART_CR3_RXFTCFG, 0x00000004U << USART_CR3_RXFTCFG_Pos);

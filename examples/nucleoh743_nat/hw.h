@@ -37,6 +37,9 @@ void gpio_write(uint8_t arg, uint8_t state);
 void logger_printf(const char *msg, ...) __attribute__ ((format (printf, 1, 2)));
 void logger_print32(uint32_t regval);
 
+void irq_disable(void);
+void irq_enable(void);
+
 #ifdef __cplusplus
 }
 #endif

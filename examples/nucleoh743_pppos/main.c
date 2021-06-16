@@ -139,6 +139,7 @@ int main(void){
 
 	size_t rblen = 0;
 	while(1){
+		sys_check_timeouts();
 		rblen = lwrb_read(&ringbuf, pack, PPP_MAXMRU);
 		if( rblen > 0 ){
 			pppos_input(ppp, pack, rblen);

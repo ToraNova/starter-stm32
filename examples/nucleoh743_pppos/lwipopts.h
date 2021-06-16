@@ -69,7 +69,7 @@
 #define LCP_MAXECHOFAILS 		3
 
 #define LWIP_DEBUG                      1
-//#define PPP_DEBUG 			LWIP_DBG_ON
+#define PPP_DEBUG 			LWIP_DBG_ON
 //#define IP_DEBUG 			LWIP_DBG_ON
 #define TCP_DEBUG 			LWIP_DBG_ON
 #define NETIF_DEBUG 			LWIP_DBG_ON

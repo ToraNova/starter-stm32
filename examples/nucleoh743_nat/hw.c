@@ -26,8 +26,8 @@ extern void sysclk_init(void);
 #define SER_USART USART3
 #define LOGGER_BUFSZ 128
 
-#define DMA10_BUFSZ 1600
-#define DMA11_BUFSZ 1600
+#define DMA10_BUFSZ 2000
+#define DMA11_BUFSZ 2000
 
 // create a buffer in sram2, buffer is uninitialized and filled with random values
 // add the following onto the linker script to allow buf to be initialized on SRAM2
@@ -158,7 +158,7 @@ void hardware_init(void){
 	USART3->CR3 |= USART_CR3_DMAT | USART_CR3_DMAR; //enable DMA xmit and recv
 	//enable transmit, receive, idle detection interrupt and FIFO
 	USART3->CR1 |= USART_CR1_RE | USART_CR1_TE | USART_CR1_IDLEIE | USART_CR1_FIFOEN;
-	USART3->BRR = (uint32_t) (84000000/1152000); //baud rate of 9600 for 84MHz clock
+	USART3->BRR = (uint32_t) (84000000/115200); //baud rate of 9600 for 84MHz clock
 
 	// configure TX and RX FIFO for usart3 (7/8 depth)
   	MODIFY_REG(USART3->CR3, USART_CR3_RXFTCFG, 0x00000004U << USART_CR3_RXFTCFG_Pos);
@@ -175,7 +175,7 @@ void hardware_init(void){
 	RCC->APB1LENR |= RCC_APB1LENR_TIM4EN;
 	TIM4->PSC = 64000; //prescaler 64000 (max 65535) on 168MHz
 	// 168000000 / 64000 = 2625 (1Hz)
-	TIM4->ARR = (uint32_t)2625*(0.1); //timer interrupt trigger after 2625 ticks, so 0.1 second int
+	TIM4->ARR = (uint32_t)(2625*(0.1)); //timer interrupt trigger after 2625 ticks, so 0.1 second int (every 100 ms)
 	TIM4->CR1 |= TIM_CR1_URS | TIM_CR1_DIR; //overflow/underflow interrupt, count down
 	TIM4->DIER |= TIM_DIER_UIE; // update interrupt ENABLED
 	TIM4->CR1 |= TIM_CR1_CEN; //enable the counter
@@ -215,13 +215,11 @@ void serial_write(uint8_t *buf, uint16_t len){
 		len = DMA10_BUFSZ;
 	}
 	memcpy(dma10_buf, buf, len);
-	while ( (DMA1_Stream0->CR & DMA_SxCR_EN )); //ensure EN bit is cleared
-	__disable_irq();
+	while ((DMA1_Stream0->CR & DMA_SxCR_EN )); //ensure EN bit is cleared
 	SER_USART->ICR |= USART_ICR_TCCF; //clear the transmission complete flag
 	//DMA1->LIFCR |= (DMA_LIFCR_CTCIF0 | DMA_LIFCR_CHTIF0 | DMA_LIFCR_CTEIF0 | DMA_LIFCR_CDMEIF0 | DMA_LIFCR_CFEIF0); //clear all DMA flags (not needed, since the flags SHOULD be cleared in the interrupt anyways)
 	DMA1_Stream0->NDTR = len;
 	DMA1_Stream0->CR |= DMA_SxCR_EN; // start the transfer
-	__enable_irq();
 }
 
 void gpio_write(uint8_t arg, uint8_t state){
@@ -324,6 +322,13 @@ uint8_t serial_getc(void){
 	return SER_USART->RDR;
 }
 */
+
+void irq_disable(void){
+	__disable_irq();
+}
+void irq_enable(void){
+	__enable_irq();
+}
 
 // Despite being call USB2_OTG
 // OTG_FS is marked as RHPort0 by TinyUSB to be consistent across stm32 port

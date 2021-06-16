@@ -1,0 +1,8 @@
+1. lwip_nat cannot ping more than 64 times due to LWIP_NAT_ICMP4_MAX == 64,
+setting LWIP_NAT_USE_OLDEST doesn't work because ticks don't increment. need to
+set NO_SYS_NO_TIMERS to 0. (fixed)
+add nat_timer_tick() to main service routine.
+
+2. pppos_netif_output alloc fail when running http. after enabling memory allocation, when we curl from client device: we get Recv failure: Connection reset by peer. netcat seems to work fine.fixed by calling the nat_timer function and sys_timeout correctly.
+
+3. main problem is etharp_output fails during pbuf_add_header.
