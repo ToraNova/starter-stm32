@@ -39,7 +39,7 @@
 #define MEM_LIBC_MALLOC			1
 #define MEMP_MEM_MALLOC			1
 #define MEM_ALIGNMENT			4
-#define MEM_SIZE                        (16*1024*1024)
+#define MEM_SIZE                        (32*1024)
 
 #define LWIP_RAW                        0
 #define LWIP_NETCONN                    0
