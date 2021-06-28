@@ -216,10 +216,12 @@ void serial_write(uint8_t *buf, uint16_t len){
 	}
 	memcpy(dma10_buf, buf, len);
 	while ((DMA1_Stream0->CR & DMA_SxCR_EN )); //ensure EN bit is cleared
+	__disable_irq();
 	SER_USART->ICR |= USART_ICR_TCCF; //clear the transmission complete flag
 	//DMA1->LIFCR |= (DMA_LIFCR_CTCIF0 | DMA_LIFCR_CHTIF0 | DMA_LIFCR_CTEIF0 | DMA_LIFCR_CDMEIF0 | DMA_LIFCR_CFEIF0); //clear all DMA flags (not needed, since the flags SHOULD be cleared in the interrupt anyways)
 	DMA1_Stream0->NDTR = len;
 	DMA1_Stream0->CR |= DMA_SxCR_EN; // start the transfer
+	__enable_irq();
 }
 
 void gpio_write(uint8_t arg, uint8_t state){

@@ -77,7 +77,6 @@ void serial_read_callback(const uint8_t *buf, uint16_t len){
 uint32_t ppp_output_callback(ppp_pcb *pcb, const void *data, uint32_t len, void *ctx){
 	LWIP_UNUSED_ARG(pcb);
 	LWIP_UNUSED_ARG(ctx);
-	irq_disable();
 	//idle_delay(20); // if using 9600, this 20ms delay seems necessary!
 	//idle_delay(50); // required to serve the http packet correctly on 1152000
 	//logger_printf("pppos_out: ");
@@ -86,7 +85,6 @@ uint32_t ppp_output_callback(ppp_pcb *pcb, const void *data, uint32_t len, void 
 	//}
 	//logger_printf("\n");
   	serial_write((uint8_t *)data, len);
-	irq_enable();
 	return len;
 }
 
